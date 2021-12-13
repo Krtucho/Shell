@@ -1,5 +1,14 @@
 #include "shunting_yard.h"
 #include "list.h"
+#include<stdbool.h>// Booleanos
+
+bool IsCommand(node* current){
+
+}
+
+bool IsOperator(node* current){
+
+}
 
 void sy(){
     // list * l = init_list("");
@@ -16,9 +25,31 @@ void sy(){
     print_list(tokens);
 
 
+    list * exit_queue = init_list("a");
+    pop_front(exit_queue);
+    list * op_stack = init_list("a");
+    pop_front(op_stack);
+
+    int count = 0;
+    node * current;
+    current = tokens->head;
+    while(count < tokens->size){
+        if(!IsOperator(current)){
+            push_front(exit_queue, current);
+        }
+        else{
+            if(op_stack->size != 0 && EPrioriy()){
+                if()
+            }
+            else{
+
+            }
+        }
+
+        current = current->next;
+
+    }
+
     free_list(tokens);
 
-    while(tokens->size>0){
-        if()
-    }
 }
