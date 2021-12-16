@@ -9,6 +9,7 @@ int main(int argc, char const *argv[])
     push_back(l, strdup("a"));
     print_list(l);
 
+    // list * a = init_list(9);
 
     // free(a);
     /* code */

@@ -10,6 +10,10 @@ bool IsOperator(node* current){
 
 }
 
+int Priority(char * op){
+    return 0;
+}
+
 void sy(){
     // list * l = init_list("");
     // printf("%d \n", l->size);
@@ -35,14 +39,27 @@ void sy(){
     current = tokens->head;
     while(count < tokens->size){
         if(!IsOperator(current)){
-            push_front(exit_queue, current);
+            InsertCommandsArgs();
+            // push_front(exit_queue, current);
         }
         else{
-            if(op_stack->size != 0 && EPrioriy()){
-                if()
+            if(IsIf(current)){//If
+            } 
+            else if(IsBoolean(current)){// && ||
+
+            }
+            else if(IsThenElse(current)){//then else-
+
+            }
+
+            else if(op_stack->size != 0 && Priority(current) - Priority(op_stack->head->value) <= 0){
+                node * temp = pop_back(op_stack);
+                push_front(exit_queue, temp);
+                free(temp);
+                push_back(op_stack, current);
             }
             else{
-
+                push_back(op_stack, current);
             }
         }
 
