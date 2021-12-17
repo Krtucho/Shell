@@ -9,22 +9,25 @@ node * Search_AND_OR(node * first_cmd, node * last_cmd){
     node * current = first_cmd;
 
     while(current != last_cmd){
-        if((current->value.operators == IF){
+        Command * current_temp = current->value;
+        if(current_temp->operators == IF){
             is_if = true;
             continue;
             }
-        if((Command)(current->value).operators == END){
+        if(current_temp->operators == END){
             is_if = false;
             continue;
             }
         if((current == AND || current == OR) && !is_if){
             return current;
         }
+
+        current = current->next;
     }
     return NULL;
 }
 
-node * Search_PIPE(node * first_cmd, node * last_cmd, enum OPERATORS operator){
+node * Search_PIPE(node * first_cmd, node * last_cmd){
     bool is_if = false;
     node * current = first_cmd;
 
@@ -42,6 +45,8 @@ node * Search_PIPE(node * first_cmd, node * last_cmd, enum OPERATORS operator){
         if(PIPE && !is_if){
             return current;
         }
+
+        current = current->next;
     }
     return NULL;
 }
@@ -60,7 +65,7 @@ node * Search_IF_THEN_ELSE(node * first_cmd, node * last_cmd, enum OPERATORS ope
 // Leaves
 node * Solve_Leaves(node * first_cmd, node * last_cmd){
     SolveBiggerRedir(first_cmd, last_cmd);
-    SolveLessRedir();
+    SolveLessRedir(first_cmd, last_cmd);
     return SolveCommands();
 }
 
@@ -78,7 +83,10 @@ void SolveBiggerRedir(node * first_cmd, node * last_cmd){
            (current->previous==REDIRLESS || current->previous==REDIRBIG)
           )
           ){
-        current->previous->value->std_in = current->value.std_out;
+        Command * prev_temp = current->previous->value;
+        Command * current_temp = current->value;
+        // current->previous->value 
+        prev_temp->std_in = current_temp->std_out;
         current = BIGGER_REDIR->previous;
         if(current == NULL){
             return;
@@ -128,27 +136,32 @@ node * Execute(node * first_cmd, node * last_cmd){
 
     // Pipes
     node * PIPE_node = Search_PIPE(first_cmd, last_cmd);
+    Command * PIPE_node_com = PIPE_node->value;
+
     if(PIPE_node!= NULL){ // 3 casos
         node * output; 
 
         if(first_cmd->next == LEAF){ // Caso en q sea una hoja a la derecha
             node * pipe_left = Solve_Leaves(first_cmd, PIPE_node->previous);
-            PIPE_node->value.std_in = (Command*)pipe_left->value.std_out;
+            Command* pipe_left_com = pipe_left->value;
+            PIPE_node_com->std_in = pipe_left_com->std_out;
             //node * pipe_right = 
             SolveBiggerRedir(PIPE_node->next, last_cmd);
             output = Execute(PIPE_node->next, last_cmd);
         }
         else if(first_cmd->next != NULL && first_cmd->next->next != NULL && first_cmd->next->next == PIPE_node){ // Caso 2: Luego del primer PIPE que encontramos viene otro PIPE | command | ...
             node * pipe_left = Solve_Leaves(first_cmd, PIPE_node->previous);
-            PIPE_node->value.std_in = pipe_left->value.std_out;
+            Command* pipe_left_com = pipe_left->value;
+            PIPE_node_com->std_in = pipe_left_com->std_out;
             // node * pipe_right = Solve_Leaves(PIPE_node, )
-            if(PIPE_node->next->value.std_in == NULL)
-                PIPE_node->next->value.std_in = pipe_left->value;
+            if(PIPE_node_com->std_in == NULL)
+                PIPE_node_com->std_in = pipe_left_com->std_out;
             Execute(PIPE_node->next, last_cmd);
         }
         else if(first_cmd->next != NULL && first_cmd->next == IF){ // 3er caso: Le sigue un if a la derecha | if()then()else()...
             node * pipe_left = Solve_Leaves(first_cmd, PIPE_node->previous);
-            PIPE_node->value.std_in = pipe_left->value.std_out;
+            Command* pipe_left_com = pipe_left->value;
+            PIPE_node_com->std_in = pipe_left_com->std_out;
             Execute(PIPE_node->next, last_cmd);
         }
     }
