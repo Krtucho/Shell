@@ -24,16 +24,18 @@ node * Search_AND_OR(node * first_cmd, node * last_cmd){
     return NULL;
 }
 
-node * Search_PIPE(first_cmd, last_cmd){
+node * Search_PIPE(node * first_cmd, node * last_cmd, enum OPERATORS operator){
     bool is_if = false;
     node * current = first_cmd;
 
     while(current != last_cmd){
-        if((current->value.operators == IF){
+        Command * current_temp = current->value;
+        // current_temp->operators
+        if(current_temp->operators == IF){
             is_if = true;
             continue;
             }
-        if((Command)(current->value).operators == END){
+        if(current_temp->operators == END){
             is_if = false;
             continue;
             }
@@ -98,7 +100,7 @@ node * SearchBiggerRedir(node * last_cmd){
 }
 
 node * SolveLessRedir(node * first_cmd, node * last_cmd){
-    
+    retun NULL;
 }
 // Leaves
 
@@ -131,7 +133,7 @@ node * Execute(node * first_cmd, node * last_cmd){
 
         if(first_cmd->next == LEAF){ // Caso en q sea una hoja a la derecha
             node * pipe_left = Solve_Leaves(first_cmd, PIPE_node->previous);
-            PIPE_node->value.std_in = pipe_left->value.std_out;
+            PIPE_node->value.std_in = (Command*)pipe_left->value.std_out;
             //node * pipe_right = 
             SolveBiggerRedir(PIPE_node->next, last_cmd);
             output = Execute(PIPE_node->next, last_cmd);
