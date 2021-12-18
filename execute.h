@@ -1,3 +1,3 @@
 #include "bin_tree.h"
 
-void Execute(node *, node *);
+node * Execute(node * first_cmd, node * last_cmd);

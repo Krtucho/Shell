@@ -1,7 +1,9 @@
 #include "execute.h"
-#include "bin_tree.h"
-#include "list.h"
-#include<stdbool.h>// Booleanos
+// #include "bin_tree.h"
+// #include "list.h"
+// #include<stdbool.h>// Booleanos
+
+
 
 node * Search_AND_OR(node * first_cmd, node * last_cmd){
 
@@ -18,7 +20,7 @@ node * Search_AND_OR(node * first_cmd, node * last_cmd){
             is_if = false;
             continue;
             }
-        if((current == AND || current == OR) && !is_if){
+        if((current_temp->operators == AND || current_temp->operators == OR) && !is_if){
             return current;
         }
 
@@ -63,10 +65,14 @@ node * Search_IF_THEN_ELSE(node * first_cmd, node * last_cmd, enum OPERATORS ope
 }
 
 // Leaves
+node * SolveCommands(node * first_cmd, node * last_cmd){
+
+}
+
 node * Solve_Leaves(node * first_cmd, node * last_cmd){
     SolveBiggerRedir(first_cmd, last_cmd);
     SolveLessRedir(first_cmd, last_cmd);
-    return SolveCommands();
+    return SolveCommands(first_cmd, last_cmd);
 }
 
 void SolveBiggerRedir(node * first_cmd, node * last_cmd){
