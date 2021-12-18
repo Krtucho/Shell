@@ -3,7 +3,7 @@
 // #include "list.h"
 // #include<stdbool.h>// Booleanos
 
-void AND_CODE(Command com){
+void AND_CODE(Command* com){
 
 }
 
@@ -72,6 +72,17 @@ node * Search_IF_THEN_ELSE(node * first_cmd, node * last_cmd, enum OPERATORS ope
 }
 
 // Leaves
+int GetIndex(Command * op){
+    return (int)op->operators;
+}
+
+void ExecuteCommand(node * cmd_to_exec){
+    Command * node_com = cmd_to_exec->value;
+    int index = GetIndex(node_com);
+    testing[index](node_com);
+}
+
+
 node * SolveCommands(node * first_cmd, node * last_cmd){
     node * current = first_cmd;
     while (current != last_cmd)
@@ -82,11 +93,6 @@ node * SolveCommands(node * first_cmd, node * last_cmd){
     return current;
 }
 
-void ExecuteCommand(node * cmd_to_exec){
-    Command * node_com = cmd_to_exec->value;
-    int index = GetIndex();
-    testing[index](node_com);
-}
 
 node * Solve_Leaves(node * first_cmd, node * last_cmd){
     SolveBiggerRedir(first_cmd, last_cmd);
@@ -97,68 +103,81 @@ node * Solve_Leaves(node * first_cmd, node * last_cmd){
 void SolveBiggerRedir(node * first_cmd, node * last_cmd){
     node * current;
     node * BIGGER_REDIR = SearchBiggerRedir(last_cmd);
+
     if(BIGGER_REDIR == NULL)
         return;
+
+    current = BIGGER_REDIR->previous;
+
     Command * prev_temp = current->previous->value;
     Command * current_temp = current->value;
-    while(current==REDIRBIG ||  // >
-          current==REDIRLESS || // <
-          (current==ARCHIVE && //  < archivo o....... > archivo
-           (current->previous==REDIRLESS || current->previous==REDIRBIG)
+
+
+    while(current_temp->operators==REDIRBIG ||  // >
+          current_temp->operators==REDIRLESS || // <
+          (current_temp->operators==ARCHIVE && //  < archivo o....... > archivo
+           (prev_temp->operators==REDIRLESS || prev_temp->operators==REDIRBIG)
           )|| // < comando o ............. > comando 
-          (current==SIMPLE_COMMAND && //  < comando o....... > comando
-           (current->previous==REDIRLESS || current->previous==REDIRBIG)
+          (current_temp->operators==SIMPLE_COMMAND && //  < comando o....... > comando
+           (prev_temp->operators==REDIRLESS || prev_temp->operators==REDIRBIG)
           )
           ){
         // Command * prev_temp = current->previous->value;
         // Command * current_temp = current->value;
         // current->previous->value 
         prev_temp->std_in = current_temp->std_out;
-        current = BIGGER_REDIR->previous;
+        current = current->previous;
+
         if(current == NULL){
             return;
         }
 
-
+        prev_temp = current->previous->value;
+        current_temp = current->value;
     }
 }
 
 node * SearchBiggerRedir(node * last_cmd){
     node * current = last_cmd;
+    Command * current_temp = current->value;
 
     while(current != last_cmd){
-        if(current == REDIRBIG){
+        if(current_temp->operators == REDIRBIG){
             return current;
         }
+
+        current = current->next;
     }
     return NULL;
 }
 
 node * SolveLessRedir(node * first_cmd, node * last_cmd){
-    retun NULL;
+    return NULL;
 }
 // Leaves
 
 node * Execute(node * first_cmd, node * last_cmd){
     if(first_cmd == last_cmd){
-        return Call();
+        return first_cmd;
     }
 
     // AND OR
     node * AND_OR = Search_AND_OR(first_cmd, last_cmd); // Buscando And u Or (&& u ||) sin que se encuentren dentro de un if
+    Command * AND_OR_com = AND_OR->value;
     if(AND_OR != NULL){
 
         node * output = Execute(first_cmd, AND_OR->previous);
-        if(AND_OR == AND){
-            if(output == true) // Si && retorna true devuelve el codigo a la derecha
+        Command * output_com = output->value;
+        if(AND_OR_com->operators == AND){
+            if(output_com->std_out == "true") // Si && retorna true devuelve el codigo a la derecha
                 return Execute (AND_OR->next, last_cmd);
             return output;
-        }else if(AND_OR == OR){
-            if(output == false) // Si || retorna false devuelve el codigo a la derecha
+        }else if(AND_OR_com->operators == OR){
+            if(output_com->std_out == "false") // Si || retorna false devuelve el codigo a la derecha
                 return Execute(AND_OR->next, last_cmd);
             return output;
         }
-        return;
+        // return NULL;
     }
 
     // Pipes
@@ -166,9 +185,12 @@ node * Execute(node * first_cmd, node * last_cmd){
     Command * PIPE_node_com = PIPE_node->value;
 
     if(PIPE_node!= NULL){ // 3 casos
-        node * output; 
+        node * output;
+        // Creo las variables de tipo Command auxiliares, necesarias en este if para pedirles su -> operators
+        Command * first_cmd_next_com = first_cmd->next->value;
+        Command * first_cmd_next_next_com = first_cmd->next->next->value;
 
-        if(first_cmd->next == LEAF){ // Caso en q sea una hoja a la derecha
+        if(first_cmd_next_com->operators == LEAF){ // Caso en q sea una hoja a la derecha
             node * pipe_left = Solve_Leaves(first_cmd, PIPE_node->previous);
             Command* pipe_left_com = pipe_left->value;
             PIPE_node_com->std_in = pipe_left_com->std_out;
@@ -185,7 +207,7 @@ node * Execute(node * first_cmd, node * last_cmd){
                 PIPE_node_com->std_in = pipe_left_com->std_out;
             Execute(PIPE_node->next, last_cmd);
         }
-        else if(first_cmd->next != NULL && first_cmd->next == IF){ // 3er caso: Le sigue un if a la derecha | if()then()else()...
+        else if(first_cmd->next != NULL && first_cmd_next_com->operators == IF){ // 3er caso: Le sigue un if a la derecha | if()then()else()...
             node * pipe_left = Solve_Leaves(first_cmd, PIPE_node->previous);
             Command* pipe_left_com = pipe_left->value;
             PIPE_node_com->std_in = pipe_left_com->std_out;
