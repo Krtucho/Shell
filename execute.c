@@ -3,7 +3,14 @@
 // #include "list.h"
 // #include<stdbool.h>// Booleanos
 
+void AND_CODE(Command com){
 
+}
+
+void (*testing[])(Command*) = {
+        AND_CODE,
+        0
+	};
 
 node * Search_AND_OR(node * first_cmd, node * last_cmd){
 
@@ -44,7 +51,7 @@ node * Search_PIPE(node * first_cmd, node * last_cmd){
             is_if = false;
             continue;
             }
-        if(PIPE && !is_if){
+        if(current_temp->operators == PIPE && !is_if){
             return current;
         }
 
@@ -66,7 +73,19 @@ node * Search_IF_THEN_ELSE(node * first_cmd, node * last_cmd, enum OPERATORS ope
 
 // Leaves
 node * SolveCommands(node * first_cmd, node * last_cmd){
+    node * current = first_cmd;
+    while (current != last_cmd)
+    {
+        ExecuteCommand(current);
+        current = current->next;
+    }
+    return current;
+}
 
+void ExecuteCommand(node * cmd_to_exec){
+    Command * node_com = cmd_to_exec->value;
+    int index = GetIndex();
+    testing[index](node_com);
 }
 
 node * Solve_Leaves(node * first_cmd, node * last_cmd){
