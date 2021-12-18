@@ -26,7 +26,7 @@ void Run(node * com){
 
     int temp = 1; // Para ir ubicando argumenta a argumento en el arreglo
     node * current = com->next;
-    while (temp < current+1)
+    while (temp < count+1)
     {
         Command * current_com = current->value;
         myargs[temp] = strdup(current_com);
