@@ -18,7 +18,7 @@ enum OPERATORS{
     SIMPLE_COMMAND=13
 }OPERATORS;
 
-typedef struct Command
+typedef struct Command// TODO: Cambiar nombre a: Expression
 {
     char * name;
     list * args;

@@ -10,7 +10,7 @@ int main(int argc, char const *argv[])
 
     Command * a = (Command*)malloc(sizeof(Command));
     c->name = "a";
-    c->operators = ARCHIVE;
+    c->operators = LEAF;
 
     list * l = init_list(c);
 

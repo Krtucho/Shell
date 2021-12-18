@@ -1,14 +1,28 @@
 #include "execute.h"
+#include "using_execvp.h"
 // #include "bin_tree.h"
 // #include "list.h"
 // #include<stdbool.h>// Booleanos
 
-void AND_CODE(Command* com){
+void SIMPLE_COMMAND_CODE(node * com){
+    int rc = fork();
+    if (rc < 0) { // fork failed; exit
+        fprintf(stderr, "fork failed\n");
+        exit(1);
+    } else if (rc == 0) { // child (new process)
+        Run(com);
+    } else { // parent goes down this path (main)
+        int wc = wait(NULL);
+    }
+}
+
+void AND_CODE(node * com){
 
 }
 
-void (*testing[])(Command*) = {
+void (*testing[])(node*) = {
         AND_CODE,
+        SIMPLE_COMMAND_CODE,
         0
 	};
 
@@ -79,7 +93,7 @@ int GetIndex(Command * op){
 void ExecuteCommand(node * cmd_to_exec){
     Command * node_com = cmd_to_exec->value;
     int index = GetIndex(node_com);
-    testing[index](node_com);
+    testing[index](cmd_to_exec);
 }
 
 
