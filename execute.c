@@ -53,9 +53,9 @@ node * Search_PIPE(node * first_cmd, node * last_cmd){
 
 node * Search_IF_THEN_ELSE(node * first_cmd, node * last_cmd, enum OPERATORS operator){
     node * current = first_cmd;
-
+    Command * current_temp = current->value;
     while(current != last_cmd){
-        if(current == operator){
+        if(current_temp->operators == operator){
             return current;
         }
     }
@@ -74,6 +74,8 @@ void SolveBiggerRedir(node * first_cmd, node * last_cmd){
     node * BIGGER_REDIR = SearchBiggerRedir(last_cmd);
     if(BIGGER_REDIR == NULL)
         return;
+    Command * prev_temp = current->previous->value;
+    Command * current_temp = current->value;
     while(current==REDIRBIG ||  // >
           current==REDIRLESS || // <
           (current==ARCHIVE && //  < archivo o....... > archivo
@@ -83,8 +85,8 @@ void SolveBiggerRedir(node * first_cmd, node * last_cmd){
            (current->previous==REDIRLESS || current->previous==REDIRBIG)
           )
           ){
-        Command * prev_temp = current->previous->value;
-        Command * current_temp = current->value;
+        // Command * prev_temp = current->previous->value;
+        // Command * current_temp = current->value;
         // current->previous->value 
         prev_temp->std_in = current_temp->std_out;
         current = BIGGER_REDIR->previous;

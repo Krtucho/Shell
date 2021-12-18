@@ -10,7 +10,7 @@ enum OPERATORS{
     THEN=5,
     ELSE=6,
     END=7,
-    PIPE=8,
+    Com=8,
     LEAF=9,
     IF_ELSE=10,
     REDIRLESS=11,
