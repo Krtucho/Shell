@@ -1,8 +1,8 @@
-#include <stdio.h>
-#include <stdlib.h>
+// #include <stdio.h>
+// #include <stdlib.h>
 #include <unistd.h>
 #include <sys/wait.h>
-#include <string.h>
+// #include <string.h>
 #include "using_execvp.h"
 
 void Run(node * com){
@@ -29,7 +29,7 @@ void Run(node * com){
     while (temp < count+1)
     {
         Command * current_com = current->value;
-        myargs[temp] = strdup(current_com);
+        myargs[temp] = strdup(current_com->name);
         temp++;
         current=current->next;
     }

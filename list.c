@@ -159,7 +159,7 @@ void print_list(list * t) {
     node * current = t->head;
     printf("Imprimiendo lista...\n");
     while (current != NULL) {
-        printf("%s ", current->value);
+        printf("%s ",(char*) current->value);
         current = current->next;
     }
     printf("\n");

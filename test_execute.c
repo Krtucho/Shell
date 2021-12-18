@@ -4,11 +4,11 @@ int main(int argc, char const *argv[])
 {
     
 
-    Command * c = (Command*)malloc(sizeof(Command));
+    Expression * c = (Expression*)malloc(sizeof(Expression));
     c->name="echo";
-    c->operators = SIMPLE_COMMAND;
+    c->operators = SIMPLE_EXPRESSION;
 
-    Command * a = (Command*)malloc(sizeof(Command));
+    Expression * a = (Expression*)malloc(sizeof(Expression));
     c->name = "a";
     c->operators = LEAF;
 
