@@ -64,9 +64,9 @@ node * Search_AND_OR(node * first_cmd, node * last_cmd){
 
     bool is_if = false;
     node * current = first_cmd;
-
+    Expression * current_temp = current->value;
     while(current != last_cmd){
-        Expression * current_temp = current->value;
+        current_temp = current->value;
         if(current_temp->operators == IF){
             is_if = true;
             continue;
@@ -76,20 +76,26 @@ node * Search_AND_OR(node * first_cmd, node * last_cmd){
             continue;
             }
         if((current_temp->operators == AND || current_temp->operators == OR) && !is_if){
+            free(current_temp);
             return current;
         }
 
         current = current->next;
     }
+
+    free(current_temp);
+    free(current);
     return NULL;
 }
 
 node * Search_PIPE(node * first_cmd, node * last_cmd){
+    printf("In Search PIPE method...\n");
     bool is_if = false;
     node * current = first_cmd;
-
+    Expression * current_temp = current->value;
     while(current != last_cmd){
-        Expression * current_temp = current->value;
+        printf("In while searching pipes...\n");
+        current_temp = current->value;
         // current_temp->operators
         if(current_temp->operators == IF){
             is_if = true;
@@ -100,11 +106,21 @@ node * Search_PIPE(node * first_cmd, node * last_cmd){
             continue;
             }
         if(current_temp->operators == PIPE && !is_if){
+            free(current_temp);
             return current;
         }
 
+        printf("Changing current variable...\n");
         current = current->next;
+        if(current == NULL)
+            printf("current is NULL");
+        printf("current variable changed...\n");
+        // Expression * temp = current->value;
+        // printf("current->value: %s", temp->name);
+        // free(temp);
     }
+    free(current_temp);
+    free(current);
     return NULL;
 }
 
@@ -145,6 +161,7 @@ node * SolveExpressions(node * first_cmd, node * last_cmd){
 node * Solve_Leaves(node * first_cmd, node * last_cmd){
     SolveBiggerRedir(first_cmd, last_cmd);
     SolveLessRedir(first_cmd, last_cmd);
+    printf("Starting to solve Expressions...\n");
     return SolveExpressions(first_cmd, last_cmd);
 }
 
@@ -209,9 +226,13 @@ node * Execute(node * first_cmd, node * last_cmd){
         return first_cmd;
     }
 
+    printf("Into Execute Method...\n");
+
     // AND OR
     node * AND_OR = Search_AND_OR(first_cmd, last_cmd); // Buscando And u Or (&& u ||) sin que se encuentren dentro de un if
-    Expression * AND_OR_com = AND_OR->value;
+    Expression * AND_OR_com;
+    if(AND_OR != NULL)
+        AND_OR_com = AND_OR->value;
     if(AND_OR != NULL){
 
         node * output = Execute(first_cmd, AND_OR->previous);
@@ -225,14 +246,24 @@ node * Execute(node * first_cmd, node * last_cmd){
                 return Execute(AND_OR->next, last_cmd);
             return output;
         }
+        free(output);
+        free(output_com);
         // return NULL;
-    }
 
+        free(AND_OR);
+        free(AND_OR_com);
+    }
+    
+    printf("Start searching Pipes...\n");
     // Pipes
     node * PIPE_node = Search_PIPE(first_cmd, last_cmd);
-    Expression * PIPE_node_com = PIPE_node->value;
+    Expression * PIPE_node_com;
+    if(PIPE_node != NULL)
+        PIPE_node_com = PIPE_node->value;
 
     if(PIPE_node!= NULL){ // 3 casos
+        printf("found a Pipe...\n");
+
         node * output;
         // Creo las variables de tipo Expression auxiliares, necesarias en este if para pedirles su -> operators
         Expression * first_cmd_next_com = first_cmd->next->value;
@@ -261,8 +292,18 @@ node * Execute(node * first_cmd, node * last_cmd){
             PIPE_node_com->std_in = pipe_left_com->std_out;
             Execute(PIPE_node->next, last_cmd);
         }
+
+        free(PIPE_node);
+        free(PIPE_node_com);
+
+        free(first_cmd_next_com);
+        free(first_cmd_next_next_com);
+        return output;
+        free(output);
     }
 
+    
+    printf("Starting If Else part...");
     // If Else
     // Si se llego hasta aca fue debido a que no se encontraron ni PIPES, ni || o && en la lista de Comandos que tenemos desde el inicio hasta este punto
     // Luego tomamos el If que nos queda y ejecutamos el codigo de la siguiente forma: Buscamos hasta que encontremos un Then, ejecutamos el If y luego dependiendo 
@@ -297,9 +338,14 @@ node * Execute(node * first_cmd, node * last_cmd){
         // {
         //     node * THEN = 
         // }
-        
+        free(THEN_node);
+        free(END_node);
+        free(ELSE_node);
+        free(IF_output);
     }
+    free(IF_ELSE_node);
 
+    printf("Starting to solve leaves...\n");
     // Leaves
     return Solve_Leaves(first_cmd, last_cmd);
 }

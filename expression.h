@@ -3,7 +3,7 @@
 
 enum OPERATORS{
     AND = 0,
-    OR = 1,
+    OR = 13,
     PIPE = 2,
     IF = 3,
     REDIRBIG=4,
@@ -15,7 +15,7 @@ enum OPERATORS{
     IF_ELSE=10,
     REDIRLESS=11,
     ARCHIVE=12,
-    SIMPLE_EXPRESSION=13
+    SIMPLE_EXPRESSION=1
 }OPERATORS;
 
 typedef struct Expression// TODO: Cambiar nombre a: Expression
