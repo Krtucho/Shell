@@ -83,6 +83,10 @@ node * Search_AND_OR(node * first_cmd, node * last_cmd){
         current = current->next;
     }
 
+    if(current == NULL)
+        printf("current is NULL");
+    if(current_temp == NULL)
+        printf("current_temp is NULL");
     free(current_temp);
     free(current);
     return NULL;
@@ -92,7 +96,7 @@ node * Search_PIPE(node * first_cmd, node * last_cmd){
     printf("In Search PIPE method...\n");
     bool is_if = false;
     node * current = first_cmd;
-    Expression * current_temp = current->value;
+    Expression * current_temp;// = current->value;
     while(current != last_cmd){
         printf("In while searching pipes...\n");
         current_temp = current->value;
@@ -119,8 +123,10 @@ node * Search_PIPE(node * first_cmd, node * last_cmd){
         // printf("current->value: %s", temp->name);
         // free(temp);
     }
-    free(current_temp);
-    free(current);
+    // if(current_temp != NULL)
+        // free(current_temp);
+    // if(current != NULL)
+    //     free(current);
     return NULL;
 }
 
@@ -128,10 +134,15 @@ node * Search_IF_THEN_ELSE(node * first_cmd, node * last_cmd, enum OPERATORS ope
     node * current = first_cmd;
     Expression * current_temp = current->value;
     while(current != last_cmd){
+        current_temp = current->value;
         if(current_temp->operators == operator){
             return current;
         }
+        current = current->next;
     }
+    // free(current);
+    // free(current_temp);
+    printf("End of Search IF_THEN_ELSE method...\n");
     return NULL;
 }
 
@@ -257,6 +268,7 @@ node * Execute(node * first_cmd, node * last_cmd){
     printf("Start searching Pipes...\n");
     // Pipes
     node * PIPE_node = Search_PIPE(first_cmd, last_cmd);
+    printf("Out of found PIPE method...\n");
     Expression * PIPE_node_com;
     if(PIPE_node != NULL)
         PIPE_node_com = PIPE_node->value;
