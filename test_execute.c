@@ -5,11 +5,11 @@ int main(int argc, char const *argv[])
     
 
     Expression * c = (Expression*)malloc(sizeof(Expression));
-    c->name=strdup("echo");
+    c->name=strdup("cat");
     c->operators = SIMPLE_EXPRESSION;
 
     Expression * a = (Expression*)malloc(sizeof(Expression));
-    a->name = strdup("a");
+    a->name = strdup("algo.txt");
     a->operators = LEAF;
 
     list * l = init_list(c);
