@@ -12,11 +12,20 @@ int main(int argc, char const *argv[])
     a->name = strdup("algo.txt");
     a->operators = LEAF;
 
+    Expression * b = (Expression*)malloc(sizeof(Expression));
+    b->name = strdup("<");
+    b->operators = REDIRLESS;
+
+    Expression * d = (Expression*)malloc(sizeof(Expression));
+    d->name = strdup("a.txt");
+    d->operators = REDIRLESS;
+
     list * l = init_list(c);
 
     // push_back(l, c);
     push_back(l, a);
-
+    push_back(l, b);
+    push_back(l, d);
 
     Expression * n = l->head->value;//getAt(l, 0)->value;
     Expression * n_one = l->tail->value;//getAt(l, 1)->value;

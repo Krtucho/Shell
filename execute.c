@@ -2,6 +2,7 @@
 // #include "using_execvp.h"
 #include <unistd.h>
 #include <sys/wait.h>
+#include<sys/stat.h>
 // #include "bin_tree.h"
 // #include "list.h"
 // #include<stdbool.h>// Booleanos
@@ -198,7 +199,44 @@ node * Solve_Leaves(node * first_cmd, node * last_cmd){
 
 
 node * SolveBiggerRedir(node * first_cmd, node * last_cmd){
-    node * output, current;
+    Expression * output;
+    node * current=first_cmd;
+    FILE *fp;
+
+    Expression * current_exp;
+    while (current!=NULL)
+    {
+        current_exp=current->value;
+        if(current_exp->operators==REDIRBIG)
+        {
+            Expression *current_next=current->next->value;
+            fp = freopen(current_next->name, "w", stdout);
+            fclose(fp);
+            output=current_next;
+
+            continue;
+
+        }
+        if(current_exp->operators==DOUBLEREDIRBIG)
+        {
+            Expression *current_next=current->next->value;
+            fp = freopen(current_next->name, "a", stdout);
+            fclose(fp);
+            output=current_next;
+            continue;
+
+        }
+        current=current->next;
+    }
+    if(output!=NULL)
+    
+    fp=freopen(output->name,"a",stdout);
+    Expression * exp=first_cmd->value;
+    printf("%s \n", exp->std_out);
+    fclose(fp);
+
+   exp->std_out="1";
+   return first_cmd; 
     
     // while ()
     // {
@@ -243,7 +281,7 @@ node * SolveBiggerRedir(node * first_cmd, node * last_cmd){
     //     current_temp = current->value;
     // }
 
-    return first_cmd;
+    //return first_cmd;
 }
 
 node * SearchBiggerRedir(node * last_cmd){
@@ -261,7 +299,38 @@ node * SearchBiggerRedir(node * last_cmd){
 }
 
 node * SolveLessRedir(node * first_cmd, node * last_cmd){
-    return NULL;
+    node * current = last_cmd;
+    node *input;
+    FILE * fp;
+    Expression * current_exp;
+
+    while (current != NULL)
+    {
+        current_exp = current->value;
+        if(current_exp->operators == REDIRLESS){
+            input=current->next;
+            break;
+        }
+        current = current->previous;
+    }
+    if(input!=NULL)
+    {
+        Expression * input_exp=input->value;
+        fp=fopen(input_exp->name,"r");
+        struct stat sb;
+        Expression * fisrt_exp=first_cmd->value;
+        if(stat(input_exp->name,&sb)==-1)
+        {
+            fisrt_exp->std_out=0;
+            return first_cmd;
+        }
+        char * file_contents=malloc(sb.st_size);
+        fread(file_contents,sb.st_size,1,fp);
+        fisrt_exp->std_in=file_contents;
+        printf("%s", file_contents);
+        fclose(fp);
+    }
+    return first_cmd;
 }
 // Leaves
 
