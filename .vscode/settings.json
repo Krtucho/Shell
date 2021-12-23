@@ -2,6 +2,7 @@
     "files.associations": {
         "type_traits": "c",
         "stdbool.h": "c",
-        "bin_tree.h": "c"
+        "bin_tree.h": "c",
+        "execute.h": "c"
     }
 }

@@ -73,12 +73,24 @@ void Run(node * com){
     // }
     
     // char * temp_out = com_to_exec->std_in;
-    freopen(com_to_exec->std_in,"r", stdin);
 
     printf("Executing command...\n");
-    int e = execvp(myargs[0], myargs);
-    fclose(stdin);
-    printf("%d", e);
+
+    // int rc = fork();
+    // if (rc < 0) { // fork failed; exit
+    //     fprintf(stderr, "fork failed\n");
+    //     exit(1);
+    // } else if (rc == 0) { // child (new process)
+        freopen(com_to_exec->std_in,"r", stdin);
+
+        int e = execvp(myargs[0], myargs);
+        fclose(stdin);
+
+        // printf("I'm in child process...\n");
+    // } else { // parent goes down this path (main)
+    //     int wc = wait(NULL);
+    // }
+    // printf("%d", e);
 }
 
 void SIMPLE_Expression_CODE(node * com){
@@ -335,8 +347,8 @@ node * SearchBiggerRedir(node * last_cmd){
 
 node * SolveLessRedir(node * first_cmd, node * last_cmd){
     node * current = last_cmd;
-    node *input;
-    FILE * fp;
+    node * input=NULL;
+    //FILE * fp;
     Expression * current_exp;
 
     printf("Llegamos a < wiiiiiii!!!!\n");
@@ -344,14 +356,21 @@ node * SolveLessRedir(node * first_cmd, node * last_cmd){
     {
         current_exp = current->value;
         if(current_exp->operators == REDIRLESS){
+            printf("Inside current REDIRLESS if...\n");
+            printf("current_exp.name = %s", current_exp->operators);
             input=current->next;
             break;
         }
         current = current->previous;
     }
+    if(current_exp != NULL)
+        printf("%s\n", current_exp->name);
+    else
+        printf("current_exp = NULL");
+    
     if(input!=NULL)
     {
-        
+        printf("Input was not equal NULL...\n");
         Expression * input_exp=input->value;
         printf("%s \n", input_exp->name);
         // fp=fopen(input_exp->name,"r");
@@ -369,6 +388,7 @@ node * SolveLessRedir(node * first_cmd, node * last_cmd){
         // fclose(fp);
         printf("%s \n", fisrt_exp->std_in);
     }
+    printf("End of Less Redir...\n");
     return first_cmd;
 }
 
@@ -385,6 +405,8 @@ node *Solve_Pipe(node * first_cmd, node * last_cmd)
     // }
 }
 // Leaves
+#define READ_END 0
+#define WRITE_END 1
 
 node * Execute(node * first_cmd, node * last_cmd){
     if(first_cmd == last_cmd){
@@ -428,20 +450,80 @@ node * Execute(node * first_cmd, node * last_cmd){
         PIPE_node_com = PIPE_node->value;
 
     if(PIPE_node!= NULL){ // 3 casos
+        // int fd1[2];
+        // int status,pid;
+
+        // pipe(fd1);
+        // pid=fork();
+        // if(pid==0)
+        // {
+        //     dup2(fd1[READ_END],STDIN_FILENO);
+        //     close(fd1[READ_END]);
+
+        //     dup2(fd1[WRITE_END],STDOUT_FILENO);
+        //     close(fd1[WRITE_END]);
+        //     return Execute(first_cmd,PIPE_node->previous);
+        // }
+        // else
+        // {
+        //     pid=fork();
+        //     if(pid==0)
+        //     {
+        //         dup2(fd1[READ_END],STDIN_FILENO);
+        //         close(fd1[WRITE_END]);
+        //         return Execute(PIPE_node->next,last_cmd);
+
+        //     }
+        //     wait(NULL);
+            
         int fd[2];
-        int status,pid;
+        pid_t pidC;
+        // char buf[10];
+        // int num;
+
+    
 
         pipe(fd);
-        pid=fork();
-        //if(pid==0)
+        pidC = fork();
+        if(pidC==0){
+            close(fd[0]);
+            dup2(fd[1], STDOUT_FILENO);
+            close(fd[1]);
+            printf("I'm in execute 1...\n");
+            Execute(first_cmd, PIPE_node->previous);
+            // execvp(myargs[0], myargs);
+            // exit(0);
+            // break;
+        }
+        else if(pidC==-1){
+            // break;
+            printf("Error\n");
+        }
+        else{
+            wait(NULL);
+
+            close(fd[1]);
+            dup2(fd[0], STDIN_FILENO);
+            // num = read(fd[0], buf, sizeof(buf));
+            // printf("%d\n",num);
+            close(fd[0]);
+
+            printf("I'm in execute 2...\n");
+            Execute(PIPE_node->next, last_cmd);
+            // execvp(myargsaaa[0], myargsaaa);
+            // break;
+        }
+
+
+        // }
         printf("found a Pipe...\n");
 
-        node * output;
+       // node * output;
         // Creo las variables de tipo Expression auxiliares, necesarias en este if para pedirles su -> operators
-        Expression * first_cmd_next_com = first_cmd->next->value;
-        Expression * first_cmd_next_next_com = first_cmd->next->next->value;
+        //Expression * first_cmd_next_com = first_cmd->next->value;
+        //Expression * first_cmd_next_next_com = first_cmd->next->next->value;
 
-        
+
 
         // if(first_cmd_next_com->operators == ARGS){ // Caso en q sea una hoja a la derecha
 
@@ -474,7 +556,7 @@ node * Execute(node * first_cmd, node * last_cmd){
 
         // free(first_cmd_next_com);
         // free(first_cmd_next_next_com);
-        return output;
+       // return output;
         // free(output);
     }
 
