@@ -1,8 +1,5 @@
-#include <stdio.h>
-int get_answer(void)
-{
-    int c;
-    int answer = 0;
+Valor de retorno de dup2:1
+Hola belsai y carlitos, lauren y daniela = 0;
     while ((c = getchar()) != EOF && c != '\n')
     {
         if (answer == 0 && (c == 'y' || c == 'n'))  // Upper-case?

@@ -18,7 +18,7 @@ void Run(node * com){
     node * last = com->next;
     Expression * last_com = last->value;
     int count = 0;
-    while(last_com != NULL && last_com->operators == LEAF){// Con leaf me refiero a los argumentos lo q aun no se bien como ponerle
+    while(last_com != NULL && (last_com->operators == ARGS || last_com->operators== ARCHIVE)){// Con ARGS me refiero a los argumentos lo q aun no se bien como ponerle
         count++;
         last = last->next;
         if(last != NULL)
@@ -41,23 +41,57 @@ void Run(node * com){
         temp++;
         current=current->next;
     }
+
+    // printf("%s \n", com_to_exec->std_in);
+    // int fd[2];
+    //int status,pid;
+
+    // pipe(f)
+
+    // if(count>0)
+    // {
+    //     //metodo para buscar un argumento distinto de -
+    // }
+    // else
+    // {
+    //     if(com_to_exec->std_in!=NULL)
+    //     {
+    //         char * myargs_temp[3];
+    //         myargs_temp[0]=com_to_exec->name;
+    //         myargs_temp[1]=com_to_exec->std_in;
+    //         myargs_temp[2]=NULL;
+    //         int e = execvp(myargs_temp[0], myargs_temp);
+
+    //     }
+    //     else
+    //     {
+    //         char * myargs_temp[2];
+    //         myargs_temp[0]=com_to_exec->name;
+    //         myargs_temp[1]=NULL;
+    //         int e = execvp(myargs_temp[0], myargs_temp);
+    //     }
+    // }
     
+    // char * temp_out = com_to_exec->std_in;
+    freopen(com_to_exec->std_in,"r", stdin);
+
     printf("Executing command...\n");
     int e = execvp(myargs[0], myargs);
+    fclose(stdin);
     printf("%d", e);
 }
 
 void SIMPLE_Expression_CODE(node * com){
-    int rc = fork();
-    if (rc < 0) { // fork failed; exit
-        fprintf(stderr, "fork failed\n");
-        exit(1);
-    } else if (rc == 0) { // child (new process)
-        printf("I'm in child process...\n");
+    // int rc = fork();
+    // if (rc < 0) { // fork failed; exit
+    //     fprintf(stderr, "fork failed\n");
+    //     exit(1);
+    // } else if (rc == 0) { // child (new process)
+    //     printf("I'm in child process...\n");
         Run(com);
-    } else { // parent goes down this path (main)
-        int wc = wait(NULL);
-    }
+    // } else { // parent goes down this path (main)
+    //     int wc = wait(NULL);
+    // }
 }
 
 void AND_CODE(node * com){
@@ -228,15 +262,16 @@ node * SolveBiggerRedir(node * first_cmd, node * last_cmd){
         }
         current=current->next;
     }
-    if(output!=NULL)
+    if(output!=NULL){
     
-    fp=freopen(output->name,"a",stdout);
-    Expression * exp=first_cmd->value;
-    printf("%s \n", exp->std_out);
-    fclose(fp);
+        fp=freopen(output->name,"a",stdout);
+        Expression * exp=first_cmd->value;
+        printf("%s \n", exp->std_out);
+        fclose(fp);
 
-   exp->std_out="1";
-   return first_cmd; 
+        exp->std_out="1";
+    }
+   return first_cmd;
     
     // while ()
     // {
@@ -304,6 +339,7 @@ node * SolveLessRedir(node * first_cmd, node * last_cmd){
     FILE * fp;
     Expression * current_exp;
 
+    printf("Llegamos a < wiiiiiii!!!!\n");
     while (current != NULL)
     {
         current_exp = current->value;
@@ -315,22 +351,38 @@ node * SolveLessRedir(node * first_cmd, node * last_cmd){
     }
     if(input!=NULL)
     {
+        
         Expression * input_exp=input->value;
-        fp=fopen(input_exp->name,"r");
-        struct stat sb;
+        printf("%s \n", input_exp->name);
+        // fp=fopen(input_exp->name,"r");
+        // struct stat sb;
         Expression * fisrt_exp=first_cmd->value;
-        if(stat(input_exp->name,&sb)==-1)
-        {
-            fisrt_exp->std_out=0;
-            return first_cmd;
-        }
-        char * file_contents=malloc(sb.st_size);
-        fread(file_contents,sb.st_size,1,fp);
-        fisrt_exp->std_in=file_contents;
-        printf("%s", file_contents);
-        fclose(fp);
+        // if(stat(input_exp->name,&sb)==-1)
+        // {
+        //     fisrt_exp->std_out=0;
+        //     return first_cmd;
+        // }
+        // char * file_contents=malloc(sb.st_size);
+        //fread(file_contents,sb.st_size,1,fp);
+        fisrt_exp->std_in=input_exp->name;
+        // printf("%s", file_contents);
+        // fclose(fp);
+        printf("%s \n", fisrt_exp->std_in);
     }
     return first_cmd;
+}
+
+node *Solve_Pipe(node * first_cmd, node * last_cmd)
+{
+    // int rc = fork();
+    // if (rc < 0) { // fork failed; exit
+    //     fprintf(stderr, "fork failed\n");
+    //     exit(1);
+    // } else if (rc == 0) { // child (new process)
+    //     printf("I'm in child process...\n");
+    // } else { // parent goes down this path (main)
+    //     int wc = wait(NULL);
+    // }
 }
 // Leaves
 
@@ -376,6 +428,12 @@ node * Execute(node * first_cmd, node * last_cmd){
         PIPE_node_com = PIPE_node->value;
 
     if(PIPE_node!= NULL){ // 3 casos
+        int fd[2];
+        int status,pid;
+
+        pipe(fd);
+        pid=fork();
+        //if(pid==0)
         printf("found a Pipe...\n");
 
         node * output;
@@ -383,29 +441,33 @@ node * Execute(node * first_cmd, node * last_cmd){
         Expression * first_cmd_next_com = first_cmd->next->value;
         Expression * first_cmd_next_next_com = first_cmd->next->next->value;
 
-        if(first_cmd_next_com->operators == LEAF){ // Caso en q sea una hoja a la derecha
-            node * pipe_left = Solve_Leaves(first_cmd, PIPE_node->previous);
-            Expression* pipe_left_com = pipe_left->value;
-            PIPE_node_com->std_in = pipe_left_com->std_out;
-            //node * pipe_right = 
-            SolveBiggerRedir(PIPE_node->next, last_cmd);
-            output = Execute(PIPE_node->next, last_cmd);
-        }
-        else if(first_cmd->next != NULL && first_cmd->next->next != NULL && first_cmd->next->next == PIPE_node){ // Caso 2: Luego del primer PIPE que encontramos viene otro PIPE | Expression | ...
-            node * pipe_left = Solve_Leaves(first_cmd, PIPE_node->previous);
-            Expression* pipe_left_com = pipe_left->value;
-            PIPE_node_com->std_in = pipe_left_com->std_out;
-            // node * pipe_right = Solve_Leaves(PIPE_node, )
-            if(PIPE_node_com->std_in == NULL)
-                PIPE_node_com->std_in = pipe_left_com->std_out;
-            Execute(PIPE_node->next, last_cmd);
-        }
-        else if(first_cmd->next != NULL && first_cmd_next_com->operators == IF){ // 3er caso: Le sigue un if a la derecha | if()then()else()...
-            node * pipe_left = Solve_Leaves(first_cmd, PIPE_node->previous);
-            Expression* pipe_left_com = pipe_left->value;
-            PIPE_node_com->std_in = pipe_left_com->std_out;
-            Execute(PIPE_node->next, last_cmd);
-        }
+        
+
+        // if(first_cmd_next_com->operators == ARGS){ // Caso en q sea una hoja a la derecha
+
+            
+        //     node * pipe_left = Solve_Leaves(first_cmd, PIPE_node->previous);
+        //     Expression* pipe_left_com = pipe_left->value;
+        //     PIPE_node_com->std_in = pipe_left_com->std_out;
+        //     //node * pipe_right = 
+        //     SolveBiggerRedir(PIPE_node->next, last_cmd);
+        //     output = Execute(PIPE_node->next, last_cmd);
+        // }
+        // else if(first_cmd->next != NULL && first_cmd->next->next != NULL && first_cmd->next->next == PIPE_node){ // Caso 2: Luego del primer PIPE que encontramos viene otro PIPE | Expression | ...
+        //     node * pipe_left = Solve_Leaves(first_cmd, PIPE_node->previous);
+        //     Expression* pipe_left_com = pipe_left->value;
+        //     PIPE_node_com->std_in = pipe_left_com->std_out;
+        //     // node * pipe_right = Solve_Leaves(PIPE_node, )
+        //     if(PIPE_node_com->std_in == NULL)
+        //         PIPE_node_com->std_in = pipe_left_com->std_out;
+        //     Execute(PIPE_node->next, last_cmd);
+        // }
+        // else if(first_cmd->next != NULL && first_cmd_next_com->operators == IF){ // 3er caso: Le sigue un if a la derecha | if()then()else()...
+        //     node * pipe_left = Solve_Leaves(first_cmd, PIPE_node->previous);
+        //     Expression* pipe_left_com = pipe_left->value;
+        //     PIPE_node_com->std_in = pipe_left_com->std_out;
+        //     Execute(PIPE_node->next, last_cmd);
+        // }
 
         // free(PIPE_node);
         // free(PIPE_node_com);

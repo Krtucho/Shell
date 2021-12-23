@@ -11,7 +11,7 @@ enum OPERATORS{
     ELSE=6,
     END=7,
     Com=8,
-    LEAF=9,
+    ARGS=9,
     IF_ELSE=10,
     REDIRLESS=11,
     ARCHIVE=12,
