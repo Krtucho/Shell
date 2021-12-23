@@ -1,14 +1,230 @@
-#include "execute.h"
+// #include "execute.h"
 // #include "using_execvp.h"
 #include <unistd.h>
 #include <sys/wait.h>
 #include<sys/stat.h>
-
+#include<stdbool.h>// Booleanos
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 // #include "bin_tree.h"
 // #include "list.h"
 // #include<stdbool.h>// Booleanos
 
+#pragma region List
+#define __ReservedMemoryforNode (node*)malloc(sizeof(node));
+#define __SafeMemoryReserved(x) if(x == NULL) exit(1);
+#define __SafeMemoryFree(x) if(x!=NULL) free(x);
 
+typedef struct node
+{
+    void * value;
+    struct node * previous;
+    struct node * next;
+} node;
+
+typedef struct list
+{
+    node* head;
+    node* tail;
+    unsigned int size;
+} list;
+
+list* init_list(void* v)
+{
+    list* l = (list*)malloc(sizeof(list));
+    __SafeMemoryReserved(l)
+    node *first = __ReservedMemoryforNode
+    __SafeMemoryReserved(first)
+    first->previous = NULL;
+    first->next = NULL;
+    first->value = v;
+    l->head = first;
+    l->tail = first;
+    l->size = 1;
+    return l;
+}
+void push_back(list* l, void* v)
+{
+    node* insert = __ReservedMemoryforNode
+    __SafeMemoryReserved(insert)
+    if(l->size==0)
+    {
+        insert->previous = NULL;
+        insert->next = NULL;
+        insert->value = v;
+        l->head = insert;
+        l->tail = insert;
+        l->size = 1;
+        return;
+    }
+    insert->value = v;
+    insert->previous = l->tail;
+    insert->next = NULL;
+    l->tail->next = insert;
+    l->tail = insert;
+    l->size++;
+}
+void push_front(list* l, void* v)
+{
+    node* insert = __ReservedMemoryforNode
+    __SafeMemoryReserved(insert)
+    if(l->size==0)
+    {
+        insert->previous = NULL;
+        insert->next = NULL;
+        insert->value = v;
+        l->head = insert;
+        l->tail = insert;
+        l->size = 1;
+        return;
+    }
+    insert->value = v;
+    insert->next = l->head;
+    insert->previous = NULL;
+    l->head->previous = insert;
+    l->head = insert;
+    l->size++; 
+}
+node* pop_back(list* l)
+{
+    if(l->size == 0) return NULL;
+    node* last = l->tail;
+    l->tail = l->tail->previous;
+    if(l->tail != NULL)
+    {
+        l->tail->next = NULL;
+    }
+    l->size--;
+    return last;
+}
+node* pop_front(list* l)
+{
+    if(l->size == 0) return NULL;
+    node* first = l->head;
+    l->head = l->head->next;
+    if(l->head != NULL)
+    {
+        l->head->previous = NULL;
+    }
+    l->size--;
+    return first;
+}
+node* getAt(list* l, int ind)
+{
+    if(ind<0 || ind>=l->size) 
+    {
+        printf("Index out of range."); 
+        exit(1);
+    }
+    node* current = l->head;
+    for (size_t i = 0; i < ind; i++, current = current->next);
+    return current;   
+}
+void insert(list* l, void* v, int ind)
+{
+    if(ind<0 || ind>=l->size) 
+    {
+        printf("Index out of range."); 
+        return;
+    }
+    if(ind==0) 
+    {
+        push_front(l, v); 
+        return;
+    }
+    if(ind==l->size-1)
+    {
+        push_back(l,v); 
+        return;
+    }
+    node* insert = __ReservedMemoryforNode
+    __SafeMemoryReserved(insert)
+    insert->value = v;
+    node* lnode = l->head;
+    node* rnode = l->head->next;
+    for(size_t i = 1; i < ind; i++)
+    {
+        lnode = rnode;
+        rnode = rnode->next;
+    }
+    lnode->next = insert;
+    insert->previous = lnode;
+    insert->next = rnode;
+    rnode->previous = insert;
+    l->size++;
+}
+void removeNode(list* l, node* item)
+{
+    if(l->size == 0) return;
+    if(item->previous == NULL) pop_front(l);
+    else if (item->next == NULL) pop_back(l);
+    else
+    {
+        node* prev = item->previous;
+        node* next = item->next; 
+        prev->next = next;
+        next->previous = prev;
+        l->size--;   
+    }
+}
+void free_list(list* l)
+{
+    node* temp = l->head->next;
+    node* current = l->head;
+    while(current!=NULL)
+    {
+        free(current);
+        current = temp;
+        if(temp != NULL)
+        {
+            temp = temp->next;
+        }
+    }
+    free(l);
+}
+
+void print_list(list * t) {
+    node * current = t->head;
+    printf("Imprimiendo lista...\n");
+    while (current != NULL) {
+        printf("%s ",(char*) current->value);
+        current = current->next;
+    }
+    printf("\n");
+}
+#pragma endregion
+
+#pragma region Expression
+enum OPERATORS{
+    AND = 0,
+    OR = 13,
+    PIPE = 2,
+    IF = 3,
+    REDIRBIG=4,
+    THEN=5,
+    ELSE=6,
+    END=7,
+    Com=8,
+    ARGS=9,
+    IF_ELSE=10,
+    REDIRLESS=11,
+    ARCHIVE=12,
+    DOUBLEREDIRBIG=14,
+    SIMPLE_EXPRESSION=1
+}OPERATORS;
+
+typedef struct Expression// TODO: Cambiar nombre a: Expression
+{
+    char * name;
+    list * args;
+    char * std_in;
+    char * std_out;
+    bool calculated;
+    enum OPERATORS operators;
+}Expression;
+
+#pragma endregion
 
 void Run(node * com){
     printf("Inside Run Method...\n");
@@ -19,7 +235,13 @@ void Run(node * com){
     // list * temp_args = init_list(com->next);
 
     node * last = com->next;
-    Expression * last_com = last->value;
+    Expression * last_com;
+
+    if(last != NULL)
+        last_com = last->value;
+    else
+        last_com = NULL;
+
     int count = 0;
     while(last_com != NULL && (last_com->operators == ARGS || last_com->operators== ARCHIVE)){// Con ARGS me refiero a los argumentos lo q aun no se bien como ponerle
         count++;
@@ -80,11 +302,11 @@ void Run(node * com){
     // printf("Executing command...\n");
     // printf("%s\n", myargs[0]);
 
-    // int rc = fork();
-    // if (rc < 0) { // fork failed; exit
-    //     fprintf(stderr, "fork failed\n");
-    //     exit(1);
-    // } else if (rc == 0) { // child (new process)
+    int rc = fork();
+    if (rc < 0) { // fork failed; exit
+        fprintf(stderr, "fork failed\n");
+        exit(1);
+    } else if (rc == 0) { // child (new process)
             // printf("com_to_exec->std_in != NULL..\n");
         // if(strcmp(com_to_exec->name, "aa")){
         //     freopen ("1.txt", "r", stdin);
@@ -106,9 +328,10 @@ void Run(node * com){
         }
 
         // printf("I'm in child process...\n");
-    // } else { // parent goes down this path (main)
-    //     int wc = wait(NULL);
-    // }
+    }
+    else { // parent goes down this path (main)
+        int wc = wait(NULL);
+    }
     // printf("%d", e);
 }
 
@@ -251,16 +474,6 @@ node * SolveExpressions(node * first_cmd, node * last_cmd){
     // }
     return current;
 }
-
-
-node * Solve_Leaves(node * first_cmd, node * last_cmd){
-    SolveLessRedir(first_cmd, last_cmd);
-    printf("Starting to solve Expressions...\n");
-    SolveExpressions(first_cmd, last_cmd);
-    return SolveBiggerRedir(first_cmd, last_cmd);
-
-}
-
 
 
 node * SolveBiggerRedir(node * first_cmd, node * last_cmd){
@@ -411,6 +624,15 @@ node * SolveLessRedir(node * first_cmd, node * last_cmd){
     return first_cmd;
 }
 
+
+node * Solve_Leaves(node * first_cmd, node * last_cmd){
+    SolveLessRedir(first_cmd, last_cmd);
+    printf("Starting to solve Expressions...\n");
+    SolveExpressions(first_cmd, last_cmd);
+    return SolveBiggerRedir(first_cmd, last_cmd);
+
+}
+
 node *Solve_Pipe(node * first_cmd, node * last_cmd)
 {
     // int rc = fork();
@@ -429,7 +651,7 @@ node *Solve_Pipe(node * first_cmd, node * last_cmd)
 
 node * Execute(node * first_cmd, node * last_cmd){
     if(first_cmd == last_cmd){
-        return first_cmd;
+        return Solve_Leaves(first_cmd, last_cmd);
     }
 
     printf("Into Execute Method...\n");
@@ -629,3 +851,86 @@ node * Execute(node * first_cmd, node * last_cmd){
     // Leaves
     return Solve_Leaves(first_cmd, last_cmd);
 }
+
+int main(int argc, char const *argv[])
+{
+    
+
+    Expression * c = (Expression*)malloc(sizeof(Expression));
+    c->name=strdup("ls"); 
+    c->operators = SIMPLE_EXPRESSION;
+    c->std_in=NULL;
+
+    // Expression * a = (Expression*)malloc(sizeof(Expression));
+    // a->name = strdup("algo.txt");
+    // a->operators = LEAF;
+
+    Expression * b = (Expression*)malloc(sizeof(Expression));
+    b->name = strdup("-i");
+    b->operators = ARGS;
+
+    // Expression * d = (Expression*)malloc(sizeof(Expression));
+    // d->name = strdup("a.txt");
+    // d->operators = ARCHIVE;
+
+    Expression * e = (Expression*)malloc(sizeof(Expression));
+    e->name = strdup("|");
+    e->operators = PIPE;
+
+    Expression * f = (Expression*)malloc(sizeof(Expression));
+    f->name = strdup("grep");
+    f->operators = SIMPLE_EXPRESSION;
+
+    Expression * g = (Expression*)malloc(sizeof(Expression));
+    g->name = strdup("u");
+    g->operators = ARGS;
+
+
+    // Testing ls -i | grep u | wc
+    Expression * h = (Expression*)malloc(sizeof(Expression));
+    h->name = strdup("|");
+    h->operators = PIPE;
+
+    Expression * i = (Expression*)malloc(sizeof(Expression));
+    i->name = strdup("wc");
+    i->operators = SIMPLE_EXPRESSION;
+    list * l = init_list(c);
+
+    //push_back(l, c);
+    // push_back(l, a);
+    push_back(l, b);
+    push_back(l, e);
+    push_back(l, f);
+    
+
+    push_back(l, g);
+    push_back(l, h);
+    push_back(l, i);
+// push_back(l, d);
+    // &&
+    
+
+    Expression * n = l->head->value;//getAt(l, 0)->value;
+    Expression * n_one = l->tail->value;//getAt(l, 1)->value;
+    printf("Valor de c: %s\n",n->name);
+    printf("Valor de a: %s\n", n_one->name);
+    // printf(list)
+
+    node * temp = Execute(l->head, l->tail);
+
+    // free(a);
+    free(c);
+    free(b);
+    free(e);
+    free(f);
+    free(g);
+    free(h);
+    free(i);
+    free(temp);
+    free(n);
+    free(n_one);
+    free_list(l);
+
+    return 0;
+}
+

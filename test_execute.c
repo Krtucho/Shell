@@ -33,7 +33,7 @@ int main(int argc, char const *argv[])
     g->operators = ARGS;
 
 
-    //Testing ls -i | grep u | wc
+    // Testing ls -i | grep u | wc
     Expression * h = (Expression*)malloc(sizeof(Expression));
     h->name = strdup("|");
     h->operators = PIPE;
