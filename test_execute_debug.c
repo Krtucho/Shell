@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include<signal.h>
 // #include "bin_tree.h"
 // #include "list.h"
 // #include<stdbool.h>// Booleanos
@@ -267,72 +268,42 @@ void Run(node * com){
         current=current->next;
     }
 
-    // printf("%s \n", com_to_exec->std_in);
-    // int fd[2];
-    //int status,pid;
-
-    // pipe(f)
-
-    // if(count>0)
-    // {
-    //     //metodo para buscar un argumento distinto de -
-    // }
-    // else
-    // {
-    //     if(com_to_exec->std_in!=NULL)
-    //     {
-    //         char * myargs_temp[3];
-    //         myargs_temp[0]=com_to_exec->name;
-    //         myargs_temp[1]=com_to_exec->std_in;
-    //         myargs_temp[2]=NULL;
-    //         int e = execvp(myargs_temp[0], myargs_temp);
-
-    //     }
-    //     else
-    //     {
-    //         char * myargs_temp[2];
-    //         myargs_temp[0]=com_to_exec->name;
-    //         myargs_temp[1]=NULL;
-    //         int e = execvp(myargs_temp[0], myargs_temp);
-    //     }
-    // }
-    
-    // char * temp_out = com_to_exec->std_in;
-
-    // printf("Executing command...\n");
-    // printf("%s\n", myargs[0]);
-
-    int rc = fork();
+    pid_t rc = fork();
     if (rc < 0) { // fork failed; exit
         fprintf(stderr, "fork failed\n");
         exit(1);
     } else if (rc == 0) { // child (new process)
-            // printf("com_to_exec->std_in != NULL..\n");
-        // if(strcmp(com_to_exec->name, "aa")){
-        //     freopen ("1.txt", "r", stdin);
-        //     fclose(stdin);    
-        // }
-        
-        if(com_to_exec->std_in != NULL){
-            // printf("com_to_exec->std_in != NULL..\n");
-
-            freopen(com_to_exec->std_in,"r", stdin);
-        }
-        // char buf[10];
-        // int num = read(STDIN_FILENO, buf, sizeof(buf));
-        // printf("%d\n",num);
         int e = execvp(myargs[0], myargs);
-
-        if(com_to_exec->std_in != NULL){
-            fclose(stdin);
-        }
+        // fclose(stdin);
+        // fclose(stdout);
+        kill(rc, SIGKILL);
 
         // printf("I'm in child process...\n");
     }
     else { // parent goes down this path (main)
-        int wc = wait(NULL);
+        int *status=0;
+        pid_t p=waitpid(rc,status,0);
+        //exit(1);
+        //kill(rc, SIGKILL);
+        // signal(SIGCHLD, handler(SIGKILL));
+        int child_pid = waitpid(-1, status, WNOHANG);
+        printf("%d\n", child_pid);
+        //int wc = wait(NULL);
+        // fclose(stdin);
+        // fclose(stdout);
+        kill(rc, SIGKILL);
     }
+    // close();
+    // kill(rc, SIGKILL);
+    // exit(1);
+   
     // printf("%d", e);
+    // fclose(stdin);
+    // fclose(stdout); 
+}
+
+void handler(int sig, pid_t pid){
+    kill(pid, sig);
 }
 
 void SIMPLE_Expression_CODE(node * com){
@@ -469,15 +440,15 @@ node * SolveExpressions(node * first_cmd, node * last_cmd){
         printf("Start ExecuteExpression method\n");
 
         ExecuteExpression(current);
-        printf("Command Executed...\n");
+        // printf("Command Executed...\n");
         // current = current->next;
     // }
-    return current;
+    return NULL;
 }
 
 
-node * SolveBiggerRedir(node * first_cmd, node * last_cmd){
-    Expression * output;
+int SolveBiggerRedir(node * first_cmd, node * last_cmd){
+    Expression * output = NULL;
     node * current=first_cmd;
     FILE *fp;
 
@@ -515,7 +486,7 @@ node * SolveBiggerRedir(node * first_cmd, node * last_cmd){
 
         exp->std_out="1";
     }
-   return first_cmd;
+   return 0;
     
     // while ()
     // {
@@ -625,7 +596,7 @@ node * SolveLessRedir(node * first_cmd, node * last_cmd){
 }
 
 
-node * Solve_Leaves(node * first_cmd, node * last_cmd){
+int Solve_Leaves(node * first_cmd, node * last_cmd){
     SolveLessRedir(first_cmd, last_cmd);
     printf("Starting to solve Expressions...\n");
     SolveExpressions(first_cmd, last_cmd);
@@ -633,23 +604,11 @@ node * Solve_Leaves(node * first_cmd, node * last_cmd){
 
 }
 
-node *Solve_Pipe(node * first_cmd, node * last_cmd)
-{
-    // int rc = fork();
-    // if (rc < 0) { // fork failed; exit
-    //     fprintf(stderr, "fork failed\n");
-    //     exit(1);
-    // } else if (rc == 0) { // child (new process)
-    //     printf("I'm in child process...\n");
-    // } else { // parent goes down this path (main)
-    //     int wc = wait(NULL);
-    // }
-}
 // Leaves
 #define READ_END 0
 #define WRITE_END 1
 
-node * Execute(node * first_cmd, node * last_cmd){
+int Execute(node * first_cmd, node * last_cmd){
     if(first_cmd == last_cmd){
         return Solve_Leaves(first_cmd, last_cmd);
     }
@@ -659,18 +618,25 @@ node * Execute(node * first_cmd, node * last_cmd){
     // AND OR
     node * AND_OR = Search_AND_OR(first_cmd, last_cmd); // Buscando And u Or (&& u ||) sin que se encuentren dentro de un if
     Expression * AND_OR_com;
-    if(AND_OR != NULL)
-        AND_OR_com = AND_OR->value;
     if(AND_OR != NULL){
+        AND_OR_com = AND_OR->value;
 
-        node * output = Execute(first_cmd, AND_OR->previous);
-        Expression * output_com = output->value;
+        int output = Execute(first_cmd, AND_OR->previous);
+        printf("Out of left &&...\n");
+        // wait(NULL);
+        //Expression * output_com = output->value;
         if(AND_OR_com->operators == AND){
-            if(output_com->std_out == "true") // Si && retorna true devuelve el codigo a la derecha
+            if(output ==0)
+            { // Si && retorna true devuelve el codigo a la derecha
+                // fclose(stdin);
+                // fclose(stdout); 
+                //close(STDOUT_FILENO);
+                //close(STD_FILENO);
                 return Execute (AND_OR->next, last_cmd);
+            }
             return output;
         }else if(AND_OR_com->operators == OR){
-            if(output_com->std_out == "false") // Si || retorna false devuelve el codigo a la derecha
+            if(output!=0) // Si || retorna false devuelve el codigo a la derecha
                 return Execute(AND_OR->next, last_cmd);
             return output;
         }
@@ -687,10 +653,11 @@ node * Execute(node * first_cmd, node * last_cmd){
     node * PIPE_node = Search_PIPE(first_cmd, last_cmd);
     printf("Out of found PIPE method...\n");
     Expression * PIPE_node_com;
-    if(PIPE_node != NULL)
-        PIPE_node_com = PIPE_node->value;
+    //if(PIPE_node != NULL)
+        
 
     if(PIPE_node!= NULL){ // 3 casos
+        PIPE_node_com = PIPE_node->value;
         // int fd1[2];
         // int status,pid;
 
@@ -719,6 +686,7 @@ node * Execute(node * first_cmd, node * last_cmd){
             
         int fd[2];
         pid_t pidC;
+        int *status=0;
         // char buf[10];
         // int num;
 
@@ -741,24 +709,39 @@ node * Execute(node * first_cmd, node * last_cmd){
             printf("Error\n");
         }
         else{
-
+            // pidC = fork();
+            // if(pidC==0)
+            // {
             close(fd[1]);
             dup2(fd[0], STDIN_FILENO);
-            // num = read(fd[0], buf, sizeof(buf));
-            // printf("%d\n",num);
+                // num = read(fd[0], buf, sizeof(buf));
+                // printf("%d\n",num);
             close(fd[0]);
 
-            // printf("I'm in execute 2...\n");
+                // printf("I'm in execute 2...\n");
             Execute(PIPE_node->next, last_cmd);
+            // }
+            // else
+            //{
+               // pid_t p=waitpid(pidC,status,0);
+                //wait(NULL);
+            //}
+           
+           
             // execvp(myargsaaa[0], myargsaaa);
             // break;
         }
+        //pid_t p1=waitpid(pidC,status,0);
+        //wait(status);
+        wait(status);
+
             // free(fd);
 
-            wait(NULL);
-
+       // wait(NULL);
         // }
         printf("found a Pipe...\n");
+        return 0;
+
 
        // node * output;
         // Creo las variables de tipo Expression auxiliares, necesarias en este if para pedirles su -> operators
@@ -820,8 +803,8 @@ node * Execute(node * first_cmd, node * last_cmd){
         node * ELSE_node = Search_IF_THEN_ELSE(THEN_node, last_cmd, ELSE);
 
         //Caso 1 para IF ELSE
-        node * IF_output = Execute(IF_ELSE_node, THEN_node->previous); // Aca se supone que se modifique la variable first_cmd, para que luego apunte hacia la instruccion siguiente al 
-        if(IF_output){ // Si devuelve True es xq tiene q ir hacia el THEN
+        int IF_output = Execute(IF_ELSE_node, THEN_node->previous); // Aca se supone que se modifique la variable first_cmd, para que luego apunte hacia la instruccion siguiente al 
+        if(IF_output==0){ // Si devuelve True es xq tiene q ir hacia el THEN
             // Ejecuta el Then
             Execute(THEN_node, ELSE_node);
         }
@@ -854,31 +837,31 @@ node * Execute(node * first_cmd, node * last_cmd){
 
 int main(int argc, char const *argv[])
 {
-    
 
     Expression * c = (Expression*)malloc(sizeof(Expression));
     c->name=strdup("ls"); 
     c->operators = SIMPLE_EXPRESSION;
     c->std_in=NULL;
 
-    // Expression * a = (Expression*)malloc(sizeof(Expression));
-    // a->name = strdup("algo.txt");
-    // a->operators = LEAF;
+    Expression * a = (Expression*)malloc(sizeof(Expression));
+    a->name = strdup("algo.txt");
+    a->operators = ARGS;
 
     Expression * b = (Expression*)malloc(sizeof(Expression));
     b->name = strdup("-i");
     b->operators = ARGS;
+
 
     // Expression * d = (Expression*)malloc(sizeof(Expression));
     // d->name = strdup("a.txt");
     // d->operators = ARCHIVE;
 
     Expression * e = (Expression*)malloc(sizeof(Expression));
-    e->name = strdup("|");
-    e->operators = PIPE;
+    e->name = strdup("||");
+    e->operators = OR;
 
     Expression * f = (Expression*)malloc(sizeof(Expression));
-    f->name = strdup("grep");
+    f->name = strdup("echo");
     f->operators = SIMPLE_EXPRESSION;
 
     Expression * g = (Expression*)malloc(sizeof(Expression));
@@ -892,20 +875,31 @@ int main(int argc, char const *argv[])
     h->operators = PIPE;
 
     Expression * i = (Expression*)malloc(sizeof(Expression));
-    i->name = strdup("wc");
+    i->name = strdup("cat");
     i->operators = SIMPLE_EXPRESSION;
+
+    Expression * j = (Expression*)malloc(sizeof(Expression));
+    j->name = strdup("|");
+    j->operators = PIPE;
+
+    Expression * k = (Expression*)malloc(sizeof(Expression));
+    k->name = strdup("exit");
+    k->operators = SIMPLE_EXPRESSION;
+
     list * l = init_list(c);
 
-    //push_back(l, c);
-    // push_back(l, a);
+   // push_back(l, c);
+    //push_back(l, a);
     push_back(l, b);
     push_back(l, e);
     push_back(l, f);
     
 
     push_back(l, g);
-    push_back(l, h);
-    push_back(l, i);
+    // push_back(l, h);
+    // push_back(l, i);
+    // push_back(l, j);
+    // push_back(l, k);
 // push_back(l, d);
     // &&
     
@@ -916,19 +910,11 @@ int main(int argc, char const *argv[])
     printf("Valor de a: %s\n", n_one->name);
     // printf(list)
 
-    node * temp = Execute(l->head, l->tail);
+    int temp = Execute(l->head, l->tail);
+    printf("%d ", temp);
+    printf("Llegue sl final, ya tengo hambre, Carlos te voy a golpear!!!!!\n");
 
-    // free(a);
-    free(c);
-    free(b);
-    free(e);
-    free(f);
-    free(g);
-    free(h);
-    free(i);
-    free(temp);
-    free(n);
-    free(n_one);
+    
     free_list(l);
 
     return 0;

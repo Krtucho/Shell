@@ -19,7 +19,13 @@ void Run(node * com){
     // list * temp_args = init_list(com->next);
 
     node * last = com->next;
-    Expression * last_com = last->value;
+    Expression * last_com;
+
+    if(last != NULL)
+        last_com = last->value;
+    else
+        last_com = NULL;
+
     int count = 0;
     while(last_com != NULL && (last_com->operators == ARGS || last_com->operators== ARCHIVE)){// Con ARGS me refiero a los argumentos lo q aun no se bien como ponerle
         count++;
@@ -78,13 +84,13 @@ void Run(node * com){
     // char * temp_out = com_to_exec->std_in;
 
     // printf("Executing command...\n");
-    // printf("%s\n", myargs[0]);
+    printf("%s\n", myargs[0]);
 
-    // int rc = fork();
-    // if (rc < 0) { // fork failed; exit
-    //     fprintf(stderr, "fork failed\n");
-    //     exit(1);
-    // } else if (rc == 0) { // child (new process)
+    pid_t rc = fork();
+    if (rc < 0) { // fork failed; exit
+        fprintf(stderr, "fork failed\n");
+        exit(1);
+    } else if (rc == 0) { // child (new process)
             // printf("com_to_exec->std_in != NULL..\n");
         // if(strcmp(com_to_exec->name, "aa")){
         //     freopen ("1.txt", "r", stdin);
@@ -106,9 +112,12 @@ void Run(node * com){
         }
 
         // printf("I'm in child process...\n");
-    // } else { // parent goes down this path (main)
-    //     int wc = wait(NULL);
-    // }
+    }
+    else { // parent goes down this path (main)
+        int *status=0;
+        pid_t p=waitpid(rc,status,0);
+        //int wc = wait(NULL);
+    }
     // printf("%d", e);
 }
 
@@ -253,17 +262,7 @@ node * SolveExpressions(node * first_cmd, node * last_cmd){
 }
 
 
-node * Solve_Leaves(node * first_cmd, node * last_cmd){
-    SolveLessRedir(first_cmd, last_cmd);
-    printf("Starting to solve Expressions...\n");
-    SolveExpressions(first_cmd, last_cmd);
-    return SolveBiggerRedir(first_cmd, last_cmd);
-
-}
-
-
-
-node * SolveBiggerRedir(node * first_cmd, node * last_cmd){
+int SolveBiggerRedir(node * first_cmd, node * last_cmd){
     Expression * output;
     node * current=first_cmd;
     FILE *fp;
@@ -302,7 +301,7 @@ node * SolveBiggerRedir(node * first_cmd, node * last_cmd){
 
         exp->std_out="1";
     }
-   return first_cmd;
+   return 0;
     
     // while ()
     // {
@@ -411,25 +410,22 @@ node * SolveLessRedir(node * first_cmd, node * last_cmd){
     return first_cmd;
 }
 
-node *Solve_Pipe(node * first_cmd, node * last_cmd)
-{
-    // int rc = fork();
-    // if (rc < 0) { // fork failed; exit
-    //     fprintf(stderr, "fork failed\n");
-    //     exit(1);
-    // } else if (rc == 0) { // child (new process)
-    //     printf("I'm in child process...\n");
-    // } else { // parent goes down this path (main)
-    //     int wc = wait(NULL);
-    // }
+
+int Solve_Leaves(node * first_cmd, node * last_cmd){
+    SolveLessRedir(first_cmd, last_cmd);
+    printf("Starting to solve Expressions...\n");
+    SolveExpressions(first_cmd, last_cmd);
+    return SolveBiggerRedir(first_cmd, last_cmd);
+
 }
+
 // Leaves
 #define READ_END 0
 #define WRITE_END 1
 
-node * Execute(node * first_cmd, node * last_cmd){
+int Execute(node * first_cmd, node * last_cmd){
     if(first_cmd == last_cmd){
-        return first_cmd;
+        return Solve_Leaves(first_cmd, last_cmd);
     }
 
     printf("Into Execute Method...\n");
@@ -437,18 +433,17 @@ node * Execute(node * first_cmd, node * last_cmd){
     // AND OR
     node * AND_OR = Search_AND_OR(first_cmd, last_cmd); // Buscando And u Or (&& u ||) sin que se encuentren dentro de un if
     Expression * AND_OR_com;
-    if(AND_OR != NULL)
-        AND_OR_com = AND_OR->value;
     if(AND_OR != NULL){
+        AND_OR_com = AND_OR->value;
 
-        node * output = Execute(first_cmd, AND_OR->previous);
-        Expression * output_com = output->value;
+        int output = Execute(first_cmd, AND_OR->previous);
+        //Expression * output_com = output->value;
         if(AND_OR_com->operators == AND){
-            if(output_com->std_out == "true") // Si && retorna true devuelve el codigo a la derecha
+            if(output ==0) // Si && retorna true devuelve el codigo a la derecha
                 return Execute (AND_OR->next, last_cmd);
             return output;
         }else if(AND_OR_com->operators == OR){
-            if(output_com->std_out == "false") // Si || retorna false devuelve el codigo a la derecha
+            if(output!=0) // Si || retorna false devuelve el codigo a la derecha
                 return Execute(AND_OR->next, last_cmd);
             return output;
         }
@@ -465,10 +460,11 @@ node * Execute(node * first_cmd, node * last_cmd){
     node * PIPE_node = Search_PIPE(first_cmd, last_cmd);
     printf("Out of found PIPE method...\n");
     Expression * PIPE_node_com;
-    if(PIPE_node != NULL)
-        PIPE_node_com = PIPE_node->value;
+    //if(PIPE_node != NULL)
+        
 
     if(PIPE_node!= NULL){ // 3 casos
+        PIPE_node_com = PIPE_node->value;
         // int fd1[2];
         // int status,pid;
 
@@ -497,6 +493,7 @@ node * Execute(node * first_cmd, node * last_cmd){
             
         int fd[2];
         pid_t pidC;
+        int *status=0;
         // char buf[10];
         // int num;
 
@@ -519,24 +516,39 @@ node * Execute(node * first_cmd, node * last_cmd){
             printf("Error\n");
         }
         else{
-
+            // pidC = fork();
+            // if(pidC==0)
+            // {
             close(fd[1]);
             dup2(fd[0], STDIN_FILENO);
-            // num = read(fd[0], buf, sizeof(buf));
-            // printf("%d\n",num);
+                // num = read(fd[0], buf, sizeof(buf));
+                // printf("%d\n",num);
             close(fd[0]);
 
-            // printf("I'm in execute 2...\n");
+                // printf("I'm in execute 2...\n");
             Execute(PIPE_node->next, last_cmd);
+            // }
+            // else
+            //{
+               // pid_t p=waitpid(pidC,status,0);
+                //wait(NULL);
+            //}
+           
+           
             // execvp(myargsaaa[0], myargsaaa);
             // break;
         }
+        //pid_t p1=waitpid(pidC,status,0);
+        //wait(status);
+        wait(status);
+
             // free(fd);
 
-            wait(NULL);
-
+       // wait(NULL);
         // }
         printf("found a Pipe...\n");
+        return 0;
+
 
        // node * output;
         // Creo las variables de tipo Expression auxiliares, necesarias en este if para pedirles su -> operators
@@ -598,8 +610,8 @@ node * Execute(node * first_cmd, node * last_cmd){
         node * ELSE_node = Search_IF_THEN_ELSE(THEN_node, last_cmd, ELSE);
 
         //Caso 1 para IF ELSE
-        node * IF_output = Execute(IF_ELSE_node, THEN_node->previous); // Aca se supone que se modifique la variable first_cmd, para que luego apunte hacia la instruccion siguiente al 
-        if(IF_output){ // Si devuelve True es xq tiene q ir hacia el THEN
+        int IF_output = Execute(IF_ELSE_node, THEN_node->previous); // Aca se supone que se modifique la variable first_cmd, para que luego apunte hacia la instruccion siguiente al 
+        if(IF_output==0){ // Si devuelve True es xq tiene q ir hacia el THEN
             // Ejecuta el Then
             Execute(THEN_node, ELSE_node);
         }
