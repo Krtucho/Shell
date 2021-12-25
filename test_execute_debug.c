@@ -213,7 +213,6 @@ enum OPERATORS{
     THEN=15,
     ELSE=16,
     END=17,
-    Com=18,
     ARGS=19,
     IF_ELSE=20,
     REDIRLESS=21,
@@ -338,7 +337,11 @@ int FALSE_CODE(node* exp){
     return 1;
 }
 
+bool inside_pipe = false;
+
 int EXIT_CODE(node* exp){
+    if(inside_pipe)
+        return 0;
     exit(0);
     return 0;
 }
@@ -347,7 +350,7 @@ int SET_CODE(node* exp){
     printf("Inside Run Method...\n");
     Expression * com_to_exec = exp->value;
     if(com_to_exec->operators != SET)
-        return;
+        return -1;
 
     Expression * var_name = exp->next->value;
 
@@ -369,6 +372,7 @@ int SET_CODE(node* exp){
     //         last_com = NULL;
     // }
     printf("Out of first while...\n");
+    return 0;
 }
 
 int (*testing[])(node*) = {
@@ -743,6 +747,7 @@ int Execute(node * first_cmd, node * last_cmd){
         // int num;
         int output=0;
 
+        inside_pipe = true;
         pipe(fd);
         pidC = fork();
         if(pidC==0){
@@ -801,6 +806,7 @@ int Execute(node * first_cmd, node * last_cmd){
 
        // wait(NULL);
         // }
+        inside_pipe = false;
         printf("found a Pipe...\n");
         return output;
 
@@ -918,12 +924,12 @@ int main(int argc, char const *argv[])
     b1->operators = PIPE;
 
      Expression * b2 = (Expression*)malloc(sizeof(Expression));
-    b2->name = strdup("grep");
-    b2->operators = SIMPLE_EXPRESSION;
+    b2->name = strdup("exit");
+    b2->operators = EXIT;
 
-     Expression * b3 = (Expression*)malloc(sizeof(Expression));
-    b3->name = strdup("u");
-    b3->operators = ARGS;
+    //  Expression * b3 = (Expression*)malloc(sizeof(Expression));
+    // b3->name = strdup("u");
+    // b3->operators = ARGS;
 
      Expression * b4 = (Expression*)malloc(sizeof(Expression));
     b4->name = strdup("|");
@@ -986,7 +992,7 @@ int main(int argc, char const *argv[])
     push_back(l, b);
     push_back(l, b1);
     push_back(l, b2);
-    push_back(l, b3);
+    // push_back(l, b3);
     push_back(l, b4);
     push_back(l, d);
     // push_back(l, d1);
