@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <string.h>
-#include "list.h"
+//#include "list.h"
 #include <stdbool.h>
-
+#include "execute.h"
 
 #pragma region Utiles
 
@@ -35,6 +35,34 @@ void ConcatChar(char c, char *chain)
 
 #pragma endregion
 
+
+
+Expression* GetExpression(char* word)
+{
+    Expression * exp = (Expression*)malloc(sizeof(Expression));
+    exp->name=strdup(word);
+    exp->operators = SIMPLE_EXPRESSION;
+    if(strcmp(word,"&&")==0)exp->operators = AND;
+    else if(strcmp(word,"||")==0)exp->operators = OR;
+    else if(strcmp(word,"|")==0)exp->operators = PIPE;
+    else if(strcmp(word,"if")==0)exp->operators = IF;
+    else if(strcmp(word,">")==0)exp->operators = REDIRBIG;
+    else if(strcmp(word,"then")==0)exp->operators = THEN;
+    else if(strcmp(word,"else")==0)exp->operators = ELSE;
+    else if(strcmp(word,"end")==0)exp->operators = END;
+    //else if(strcmp(word,"&")==0)exp->operators = Com;///////////que significa com
+    //else if(strcmp(word,"&")==0)exp->operators = LEAF;////////ver que poner en hoja
+    else if(strcmp(word,"&")==0)exp->operators = IF_ELSE;/////////verificar lo del if else
+    else if(strcmp(word,"<")==0)exp->operators = REDIRLESS;
+    else if(strcmp(word,"&")==0)exp->operators = ARCHIVE;///////////ver como comprobar que sea .txt
+    else exp->operators =SIMPLE_EXPRESSION;
+    return exp;
+}
+list* CreateExpressionList(list* string_list)
+{
+
+}
+
 void EjecuteLine(list* line)
 {
 
@@ -43,8 +71,7 @@ void EjecuteLine(list* line)
 void Shell()
 {
 
-
- while (1)
+while (1)
     {
         printf("\n my-shell $ ");
 
@@ -56,6 +83,8 @@ void Shell()
 
         char c=getchar();  //cada uno de los char a leer de consola   
         
+//        bool concat=true;
+
         while(c!= '\n')
         {
          
@@ -98,6 +127,11 @@ void Shell()
                 //lo termino de conformar.
                 {
                     ConcatChar(c,word);
+                    if(!SpecialCaracters(word))
+                    {
+                        printf("syntax error near unexpected token '%s'",c);
+                        return;
+                    }
                     c=getchar();
                     continue;
                 }
@@ -133,18 +167,22 @@ void Shell()
                 c=getchar();
                 continue;
             }
+            
+            //if(concat)
             ConcatChar(c,word);
             c=getchar();
         }
 
         push_back(line, strdup(word));
-        strcpy(word,"");
-        free(word);
         pop_front(line);
-        print_list(line);
+        EjecuteLine(line);
+        strcpy(word,"");
+        free(word);        
+        //print_list(line);
         free_list(line);
 
     }
+
 
 
 }
@@ -154,3 +192,4 @@ int main(int argc, char const *argv[])
     Shell();
     return 0;
 }
+
