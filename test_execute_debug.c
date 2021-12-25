@@ -198,21 +198,25 @@ void print_list(list * t) {
 
 #pragma region Expression
 enum OPERATORS{
-    AND = 0,
-    OR = 13,
-    PIPE = 2,
-    IF = 3,
-    REDIRBIG=4,
-    THEN=5,
-    ELSE=6,
-    END=7,
-    Com=8,
-    ARGS=9,
-    IF_ELSE=10,
-    REDIRLESS=11,
-    ARCHIVE=12,
-    DOUBLEREDIRBIG=14,
-    SIMPLE_EXPRESSION=1
+    TRUE = 0,
+    FALSE = 1,
+    SIMPLE_EXPRESSION=2,
+    EXIT=3,
+    AND = 10,
+    OR = 11,
+    PIPE = 12,
+    IF = 13,
+    REDIRBIG=14,
+    THEN=15,
+    ELSE=16,
+    END=17,
+    Com=18,
+    ARGS=19,
+    IF_ELSE=20,
+    REDIRLESS=21,
+    ARCHIVE=22,
+    DOUBLEREDIRBIG=23
+    
 }OPERATORS;
 
 typedef struct Expression// TODO: Cambiar nombre a: Expression
@@ -286,8 +290,8 @@ void Run(node * com){
         //exit(1);
         //kill(rc, SIGKILL);
         // signal(SIGCHLD, handler(SIGKILL));
-        int child_pid = waitpid(-1, status, WNOHANG);
-        printf("%d\n", child_pid);
+        // int child_pid = waitpid(-1, status, WNOHANG);
+        // printf("%d\n", child_pid);
         //int wc = wait(NULL);
         // fclose(stdin);
         // fclose(stdout);
@@ -306,26 +310,41 @@ void handler(int sig, pid_t pid){
     kill(pid, sig);
 }
 
-void SIMPLE_Expression_CODE(node * com){
+int SIMPLE_Expression_CODE(node * exp){
     // int rc = fork();
     // if (rc < 0) { // fork failed; exit
     //     fprintf(stderr, "fork failed\n");
     //     exit(1);
     // } else if (rc == 0) { // child (new process)
     //     printf("I'm in child process...\n");
-        Run(com);
+        Run(exp);
+        return 0;
     // } else { // parent goes down this path (main)
     //     int wc = wait(NULL);
     // }
 }
 
-void AND_CODE(node * com){
+// int AND_CODE(node * com){
 
+// }
+int TRUE_CODE(node* exp){
+    return 0;
 }
 
-void (*testing[])(node*) = {
-        AND_CODE,
+int FALSE_CODE(node* exp){
+    return 1;
+}
+
+int EXIT_CODE(node* exp){
+    exit(0);
+    return 0;
+}
+
+int (*testing[])(node*) = {
+        TRUE_CODE,
+        FALSE_CODE,
         SIMPLE_Expression_CODE,
+        EXIT_CODE,
         0
 	};
 
@@ -338,13 +357,13 @@ node * Search_AND_OR(node * first_cmd, node * last_cmd){
         current_temp = current->value;
         if(current_temp->operators == IF){
             is_if = true;
-            continue;
+            //continue;
             }
-        if(current_temp->operators == END){
+        else if(current_temp->operators == END){
             is_if = false;
-            continue;
+            //continue;
             }
-        if((current_temp->operators == AND || current_temp->operators == OR) && !is_if){
+        else if((current_temp->operators == AND || current_temp->operators == OR) && !is_if){
             // free(current_temp);
             return current;
         }
@@ -372,13 +391,13 @@ node * Search_PIPE(node * first_cmd, node * last_cmd){
         // current_temp->operators
         if(current_temp->operators == IF){
             is_if = true;
-            continue;
+            //continue;
             }
-        if(current_temp->operators == END){
+        else if(current_temp->operators == END){
             is_if = false;
-            continue;
+            //continue;
             }
-        if(current_temp->operators == PIPE && !is_if){
+        else if(current_temp->operators == PIPE && !is_if){
             // free(current_temp);
             return current;
         }
@@ -403,7 +422,7 @@ node * Search_IF_THEN_ELSE(node * first_cmd, node * last_cmd, enum OPERATORS ope
     printf("I'm in IF THEN ELSE method...\n");
     node * current = first_cmd;
     Expression * current_temp = current->value;
-    while(current != last_cmd){
+    while(current != NULL){
         current_temp = current->value;
         if(current_temp->operators == operator){
             return current;
@@ -421,36 +440,32 @@ int GetIndex(Expression * op){
     return (int)op->operators;
 }
 
-void ExecuteExpression(node * cmd_to_exec){
+int ExecuteExpression(node * cmd_to_exec){
     Expression * node_com = cmd_to_exec->value;
     // enum OPERATORS op = node_com->operators;
     printf("Getting index_method...\n");
     // printf("%d", node_com->operators);
     int index = node_com->operators;
     printf("Index: %d \n", index);
-    testing[index](cmd_to_exec);
+    return testing[index](cmd_to_exec);
     // free(node_com);
 }
 
 
-node * SolveExpressions(node * first_cmd, node * last_cmd){
+int SolveExpressions(node * first_cmd, node * last_cmd){
     node * current = first_cmd;
-    // while (current != NULL && &current != &last_cmd)
-    // {
-        printf("Start ExecuteExpression method\n");
 
-        ExecuteExpression(current);
-        // printf("Command Executed...\n");
-        // current = current->next;
-    // }
-    return NULL;
+    printf("Start ExecuteExpression method\n");
+
+    return ExecuteExpression(current);
 }
 
 
-int SolveBiggerRedir(node * first_cmd, node * last_cmd){
+int SolveBiggerRedir(node * first_cmd, node * last_cmd, int exp_out){
     Expression * output = NULL;
     node * current=first_cmd;
     FILE *fp;
+    bool redir_found = false;
 
     Expression * current_exp;
     while (current!=NULL)
@@ -485,9 +500,12 @@ int SolveBiggerRedir(node * first_cmd, node * last_cmd){
         fclose(fp);
 
         exp->std_out="1";
+        redir_found = true;
     }
-   return 0;
-    
+
+    if(redir_found == false)
+        return exp_out;
+    return 0;
     // while ()
     // {
     //     /* code */
@@ -599,8 +617,8 @@ node * SolveLessRedir(node * first_cmd, node * last_cmd){
 int Solve_Leaves(node * first_cmd, node * last_cmd){
     SolveLessRedir(first_cmd, last_cmd);
     printf("Starting to solve Expressions...\n");
-    SolveExpressions(first_cmd, last_cmd);
-    return SolveBiggerRedir(first_cmd, last_cmd);
+    int exp_out = SolveExpressions(first_cmd, last_cmd);
+    return SolveBiggerRedir(first_cmd, last_cmd, exp_out);
 
 }
 
@@ -689,8 +707,6 @@ int Execute(node * first_cmd, node * last_cmd){
         int *status=0;
         // char buf[10];
         // int num;
-
-    
 
         pipe(fd);
         pidC = fork();
@@ -803,14 +819,14 @@ int Execute(node * first_cmd, node * last_cmd){
         node * ELSE_node = Search_IF_THEN_ELSE(THEN_node, last_cmd, ELSE);
 
         //Caso 1 para IF ELSE
-        int IF_output = Execute(IF_ELSE_node, THEN_node->previous); // Aca se supone que se modifique la variable first_cmd, para que luego apunte hacia la instruccion siguiente al 
+        int IF_output = Execute(IF_ELSE_node->next, THEN_node->previous); // Aca se supone que se modifique la variable first_cmd, para que luego apunte hacia la instruccion siguiente al 
         if(IF_output==0){ // Si devuelve True es xq tiene q ir hacia el THEN
             // Ejecuta el Then
-            Execute(THEN_node, ELSE_node);
+            return Execute(THEN_node->next, ELSE_node->previous);
         }
         else{
             // Ejecuta el Else
-            Execute(ELSE_node, END_node);
+            return Execute(ELSE_node->next, END_node->previous);
         }
 
         // Si encuentra un IF_ELSE entra en el ciclo
@@ -839,66 +855,88 @@ int main(int argc, char const *argv[])
 {
 
     Expression * c = (Expression*)malloc(sizeof(Expression));
-    c->name=strdup("ls"); 
-    c->operators = SIMPLE_EXPRESSION;
+    c->name=strdup("if"); 
+    c->operators = IF;
     c->std_in=NULL;
 
     Expression * a = (Expression*)malloc(sizeof(Expression));
-    a->name = strdup("algo.txt");
-    a->operators = ARGS;
+    a->name = strdup("echo");
+    a->operators = SIMPLE_EXPRESSION;
 
     Expression * b = (Expression*)malloc(sizeof(Expression));
-    b->name = strdup("-i");
+    b->name = strdup("a");
     b->operators = ARGS;
 
 
-    // Expression * d = (Expression*)malloc(sizeof(Expression));
-    // d->name = strdup("a.txt");
-    // d->operators = ARCHIVE;
+    Expression * d = (Expression*)malloc(sizeof(Expression));
+    d->name = strdup("|");
+    d->operators = PIPE;
+
+    Expression * d1 = (Expression*)malloc(sizeof(Expression));
+    d1->name = strdup("ls");
+    d1->operators = SIMPLE_EXPRESSION;
+
+    Expression * d2 = (Expression*)malloc(sizeof(Expression));
+    d2->name = strdup("&&");
+    d2->operators = AND;
+
+    Expression * d3 = (Expression*)malloc(sizeof(Expression));
+    d3->name = strdup("cat");
+    d3->operators = SIMPLE_EXPRESSION;
+
+    Expression * d4 = (Expression*)malloc(sizeof(Expression));
+    d4->name = strdup("a.txt");
+    d4->operators = SIMPLE_EXPRESSION;
 
     Expression * e = (Expression*)malloc(sizeof(Expression));
-    e->name = strdup("||");
-    e->operators = OR;
+    e->name = strdup("then");
+    e->operators = THEN;
 
     Expression * f = (Expression*)malloc(sizeof(Expression));
     f->name = strdup("echo");
     f->operators = SIMPLE_EXPRESSION;
 
     Expression * g = (Expression*)malloc(sizeof(Expression));
-    g->name = strdup("u");
+    g->name = strdup("b");
     g->operators = ARGS;
 
 
     // Testing ls -i | grep u | wc
     Expression * h = (Expression*)malloc(sizeof(Expression));
-    h->name = strdup("|");
-    h->operators = PIPE;
+    h->name = strdup("else");
+    h->operators = ELSE;
 
     Expression * i = (Expression*)malloc(sizeof(Expression));
-    i->name = strdup("cat");
-    i->operators = SIMPLE_EXPRESSION;
+    i->name = strdup("exit");
+    i->operators = EXIT;
 
     Expression * j = (Expression*)malloc(sizeof(Expression));
-    j->name = strdup("|");
-    j->operators = PIPE;
+    j->name = strdup("end");
+    j->operators = END;
 
-    Expression * k = (Expression*)malloc(sizeof(Expression));
-    k->name = strdup("exit");
-    k->operators = SIMPLE_EXPRESSION;
+    // Expression * k = (Expression*)malloc(sizeof(Expression));
+    // k->name = strdup("end");
+    // k->operators = END;
 
     list * l = init_list(c);
 
-   // push_back(l, c);
-    //push_back(l, a);
+    //push_back(l, c);
+    push_back(l, a);
     push_back(l, b);
+    push_back(l, d);
+    push_back(l, d1);
+    push_back(l, d2);
+    push_back(l, d3);
+    push_back(l, d4);
+    // push_back(l, d);
     push_back(l, e);
     push_back(l, f);
     
 
     push_back(l, g);
-    // push_back(l, h);
-    // push_back(l, i);
-    // push_back(l, j);
+    push_back(l, h);
+    push_back(l, i);
+    push_back(l, j);
     // push_back(l, k);
 // push_back(l, d);
     // &&
