@@ -27,7 +27,7 @@ int main(void) {
        }
    }
 
-   e.key = "Intel";
+   e.key = "ARM";
    ep = hsearch(e, FIND);
    printf("%s -> %s\n", e.key, (char*)ep->data);
 
