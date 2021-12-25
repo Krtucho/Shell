@@ -202,6 +202,9 @@ enum OPERATORS{
     FALSE = 1,
     SIMPLE_EXPRESSION=2,
     EXIT=3,
+    SET=4,
+    GET=5,
+    UNSET=6,
     AND = 10,
     OR = 11,
     PIPE = 12,
@@ -280,7 +283,7 @@ void Run(node * com){
         int e = execvp(myargs[0], myargs);
         // fclose(stdin);
         // fclose(stdout);
-        kill(rc, SIGKILL);
+        // kill(rc, SIGKILL);
 
         // printf("I'm in child process...\n");
     }
@@ -340,11 +343,42 @@ int EXIT_CODE(node* exp){
     return 0;
 }
 
+int SET_CODE(node* exp){
+    printf("Inside Run Method...\n");
+    Expression * com_to_exec = exp->value;
+    if(com_to_exec->operators != SET)
+        return;
+
+    Expression * var_name = exp->next->value;
+
+    node * last = exp->next->next;
+    Expression * last_exp;
+
+    if(last != NULL)
+        last_exp = last->value;
+    else
+        last_exp = NULL;
+
+    int count = 0;
+    // while(last_com != NULL && (last_com->operators == ARGS || last_com->operators== ARCHIVE)){// Con ARGS me refiero a los argumentos lo q aun no se bien como ponerle
+    //     count++;
+    //     last = last->next;
+    //     if(last != NULL)
+    //         last_com = last->value;
+    //     else
+    //         last_com = NULL;
+    // }
+    printf("Out of first while...\n");
+}
+
 int (*testing[])(node*) = {
         TRUE_CODE,
         FALSE_CODE,
         SIMPLE_Expression_CODE,
         EXIT_CODE,
+        SET_CODE,
+        // GET_CODE,
+        // UNSET_CODE,
         0
 	};
 
@@ -707,6 +741,7 @@ int Execute(node * first_cmd, node * last_cmd){
         int *status=0;
         // char buf[10];
         // int num;
+        int output=0;
 
         pipe(fd);
         pidC = fork();
@@ -714,7 +749,7 @@ int Execute(node * first_cmd, node * last_cmd){
             close(fd[0]);
             dup2(fd[1], STDOUT_FILENO);
             close(fd[1]);
-            // printf("I'm in execute 1...\n");
+            printf("I'm in execute 1...\n");
             Execute(first_cmd, PIPE_node->previous);
             // execvp(myargs[0], myargs);
             // exit(0);
@@ -725,9 +760,15 @@ int Execute(node * first_cmd, node * last_cmd){
             printf("Error\n");
         }
         else{
+
+           // pid_t p=waitpid(pidC,status,0);
+            //kill(p, SIGKILL);
             // pidC = fork();
             // if(pidC==0)
             // {
+            // pid_t p1=waitpid(pidC,status,0);
+            // kill(p1, SIGKILL);
+
             close(fd[1]);
             dup2(fd[0], STDIN_FILENO);
                 // num = read(fd[0], buf, sizeof(buf));
@@ -735,28 +776,33 @@ int Execute(node * first_cmd, node * last_cmd){
             close(fd[0]);
 
                 // printf("I'm in execute 2...\n");
-            Execute(PIPE_node->next, last_cmd);
+            output = Execute(PIPE_node->next, last_cmd);
             // }
             // else
             //{
-               // pid_t p=waitpid(pidC,status,0);
+           // pid_t p=waitpid(pidC,status,0);
                 //wait(NULL);
             //}
+           //wait(status);
+
            
-           
+        //    pid_t p1=waitpid(pidC,status,0);
+        //     kill(pidC, SIGKILL);
+            int child_pid = waitpid(-1, status, WNOHANG);
+            // printf("%d\n", child_pid);
             // execvp(myargsaaa[0], myargsaaa);
             // break;
         }
-        //pid_t p1=waitpid(pidC,status,0);
-        //wait(status);
-        wait(status);
+        
+        
+        // wait(status);
 
             // free(fd);
 
        // wait(NULL);
         // }
         printf("found a Pipe...\n");
-        return 0;
+        return output;
 
 
        // node * output;
@@ -860,33 +906,48 @@ int main(int argc, char const *argv[])
     c->std_in=NULL;
 
     Expression * a = (Expression*)malloc(sizeof(Expression));
-    a->name = strdup("echo");
+    a->name = strdup("ls");
     a->operators = SIMPLE_EXPRESSION;
 
     Expression * b = (Expression*)malloc(sizeof(Expression));
-    b->name = strdup("a");
+    b->name = strdup("-i");
     b->operators = ARGS;
 
+    Expression * b1 = (Expression*)malloc(sizeof(Expression));
+    b1->name = strdup("|");
+    b1->operators = PIPE;
+
+     Expression * b2 = (Expression*)malloc(sizeof(Expression));
+    b2->name = strdup("grep");
+    b2->operators = SIMPLE_EXPRESSION;
+
+     Expression * b3 = (Expression*)malloc(sizeof(Expression));
+    b3->name = strdup("u");
+    b3->operators = ARGS;
+
+     Expression * b4 = (Expression*)malloc(sizeof(Expression));
+    b4->name = strdup("|");
+    b4->operators = PIPE;
 
     Expression * d = (Expression*)malloc(sizeof(Expression));
-    d->name = strdup("|");
-    d->operators = PIPE;
+    d->name = strdup("wc");
+    d->operators = SIMPLE_EXPRESSION;
 
-    Expression * d1 = (Expression*)malloc(sizeof(Expression));
-    d1->name = strdup("ls");
-    d1->operators = SIMPLE_EXPRESSION;
+    // Expression * d1 = (Expression*)malloc(sizeof(Expression));
+    // d1->name = strdup("exit");
+    // d1->operators = EXIT;
 
     Expression * d2 = (Expression*)malloc(sizeof(Expression));
     d2->name = strdup("&&");
     d2->operators = AND;
 
     Expression * d3 = (Expression*)malloc(sizeof(Expression));
-    d3->name = strdup("cat");
+    d3->name = strdup("echo");
     d3->operators = SIMPLE_EXPRESSION;
 
     Expression * d4 = (Expression*)malloc(sizeof(Expression));
-    d4->name = strdup("a.txt");
-    d4->operators = SIMPLE_EXPRESSION;
+    d4->name = strdup("bbb");
+    d4->operators = ARGS;
 
     Expression * e = (Expression*)malloc(sizeof(Expression));
     e->name = strdup("then");
@@ -923,12 +984,16 @@ int main(int argc, char const *argv[])
     //push_back(l, c);
     push_back(l, a);
     push_back(l, b);
+    push_back(l, b1);
+    push_back(l, b2);
+    push_back(l, b3);
+    push_back(l, b4);
     push_back(l, d);
-    push_back(l, d1);
+    // push_back(l, d1);
     push_back(l, d2);
     push_back(l, d3);
     push_back(l, d4);
-    // push_back(l, d);
+    //push_back(l, d);
     push_back(l, e);
     push_back(l, f);
     
@@ -937,7 +1002,7 @@ int main(int argc, char const *argv[])
     push_back(l, h);
     push_back(l, i);
     push_back(l, j);
-    // push_back(l, k);
+    //push_back(l, k);
 // push_back(l, d);
     // &&
     
