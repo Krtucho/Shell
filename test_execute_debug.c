@@ -236,7 +236,7 @@ typedef struct Expression// TODO: Cambiar nombre a: Expression
 #pragma endregion
 
 void Run(node * com){
-    printf("Inside Run Method...\n");
+    // printf("Inside Run Method...\n");
     Expression * com_to_exec = com->value;
     if(com_to_exec->operators != SIMPLE_EXPRESSION)
         return;
@@ -260,7 +260,7 @@ void Run(node * com){
         else
             last_com = NULL;
     }
-    printf("Out of first while...\n");
+    // printf("Out of first while...\n");
 
     char *myargs[count+2];
     myargs[count+1] = NULL;
@@ -433,7 +433,7 @@ int EXIT_CODE(node* exp){
 }
 
 int SET_CODE(node* exp){
-    printf("Inside Run Method...\n");
+    // printf("Inside Run Method...\n");
     Expression * com_to_exec = exp->value;
     if(com_to_exec->operators != SET)
         return -1;
@@ -457,7 +457,7 @@ int SET_CODE(node* exp){
     //     else
     //         last_com = NULL;
     // }
-    printf("Out of first while...\n");
+    // printf("Out of first while...\n");
     return 0;
 }
 
@@ -495,22 +495,22 @@ node * Search_AND_OR(node * first_cmd, node * last_cmd){
         current = current->next;
     }
 
-    if(current == NULL)
-        printf("current is NULL");
-    if(current_temp == NULL)
-        printf("current_temp is NULL");
+    // if(current == NULL)
+    //     printf("current is NULL");
+    // if(current_temp == NULL)
+    //     printf("current_temp is NULL");
     // free(current_temp);
     // free(current);
     return NULL;
 }
 
 node * Search_PIPE(node * first_cmd, node * last_cmd){
-    printf("In Search PIPE method...\n");
+    // printf("In Search PIPE method...\n");
     bool is_if = false;
     node * current = first_cmd;
     Expression * current_temp;// = current->value;
     while(current != last_cmd){
-        printf("In while searching pipes...\n");
+        // printf("In while searching pipes...\n");
         current_temp = current->value;
         // current_temp->operators
         if(current_temp->operators == IF){
@@ -526,11 +526,11 @@ node * Search_PIPE(node * first_cmd, node * last_cmd){
             return current;
         }
 
-        printf("Changing current variable...\n");
+        // printf("Changing current variable...\n");
         current = current->next;
-        if(current == NULL)
-            printf("current is NULL");
-        printf("current variable changed...\n");
+        // if(current == NULL)
+        //     printf("current is NULL");
+        // printf("current variable changed...\n");
         // Expression * temp = current->value;
         // printf("current->value: %s", temp->name);
         // free(temp);
@@ -543,7 +543,7 @@ node * Search_PIPE(node * first_cmd, node * last_cmd){
 }
 
 node * Search_IF_THEN_ELSE(node * first_cmd, node * last_cmd, enum OPERATORS operator){
-    printf("I'm in IF THEN ELSE method...\n");
+    // printf("I'm in IF THEN ELSE method...\n");
     node * current = first_cmd;
     Expression * current_temp = current->value;
     while(current != NULL){
@@ -555,7 +555,7 @@ node * Search_IF_THEN_ELSE(node * first_cmd, node * last_cmd, enum OPERATORS ope
     }
     // free(current);
     // free(current_temp);
-    printf("End of Search IF_THEN_ELSE method...\n");
+    // printf("End of Search IF_THEN_ELSE method...\n");
     return NULL;
 }
 
@@ -567,10 +567,10 @@ int GetIndex(Expression * op){
 int ExecuteExpression(node * cmd_to_exec){
     Expression * node_com = cmd_to_exec->value;
     // enum OPERATORS op = node_com->operators;
-    printf("Getting index_method...\n");
+    // printf("Getting index_method...\n");
     // printf("%d", node_com->operators);
     int index = node_com->operators;
-    printf("Index: %d \n", index);
+    // printf("Index: %d \n", index);
     return testing[index](cmd_to_exec);
     // free(node_com);
 }
@@ -579,7 +579,7 @@ int ExecuteExpression(node * cmd_to_exec){
 int SolveExpressions(node * first_cmd, node * last_cmd){
     node * current = first_cmd;
 
-    printf("Start ExecuteExpression method\n");
+    // printf("Start ExecuteExpression method\n");
 
     return ExecuteExpression(current);
 }
@@ -695,28 +695,28 @@ node * SolveLessRedir(node * first_cmd, node * last_cmd){
     //FILE * fp;
     Expression * current_exp;
 
-    printf("Llegamos a < wiiiiiii!!!!\n");
+    // printf("Llegamos a < wiiiiiii!!!!\n");
     while (current != NULL)
     {
         current_exp = current->value;
         if(current_exp->operators == REDIRLESS){
-            printf("Inside current REDIRLESS if...\n");
-            printf("current_exp.name = %d", current_exp->operators);
+            // printf("Inside current REDIRLESS if...\n");
+            // printf("current_exp.name = %d", current_exp->operators);
             input=current->next;
             break;
         }
         current = current->previous;
     }
-    if(current_exp != NULL)
-        printf("%s\n", current_exp->name);
-    else
-        printf("current_exp = NULL");
+    // if(current_exp != NULL)
+    //     printf("%s\n", current_exp->name);
+    // else
+    //     printf("current_exp = NULL");
     
     if(input!=NULL)
     {
-        printf("Input was not equal NULL...\n");
+        // printf("Input was not equal NULL...\n");
         Expression * input_exp=input->value;
-        printf("%s \n", input_exp->name);
+        // printf("%s \n", input_exp->name);
         // fp=fopen(input_exp->name,"r");
         // struct stat sb;
         Expression * fisrt_exp=first_cmd->value;
@@ -730,16 +730,16 @@ node * SolveLessRedir(node * first_cmd, node * last_cmd){
         fisrt_exp->std_in=input_exp->name;
         // printf("%s", file_contents);
         // fclose(fp);
-        printf("%s \n", fisrt_exp->std_in);
+        // printf("%s \n", fisrt_exp->std_in);
     }
-    printf("End of Less Redir...\n");
+    // printf("End of Less Redir...\n");
     return first_cmd;
 }
 
 
 int Solve_Leaves(node * first_cmd, node * last_cmd){
     SolveLessRedir(first_cmd, last_cmd);
-    printf("Starting to solve Expressions...\n");
+    // printf("Starting to solve Expressions...\n");
     int exp_out = SolveExpressions(first_cmd, last_cmd);
     return SolveBiggerRedir(first_cmd, last_cmd, exp_out);
 
@@ -754,7 +754,7 @@ int Execute(node * first_cmd, node * last_cmd){
         return Solve_Leaves(first_cmd, last_cmd);
     }
 
-    printf("Into Execute Method...\n");
+    // printf("Into Execute Method...\n");
 
     // AND OR
     node * AND_OR = Search_AND_OR(first_cmd, last_cmd); // Buscando And u Or (&& u ||) sin que se encuentren dentro de un if
@@ -763,7 +763,7 @@ int Execute(node * first_cmd, node * last_cmd){
         AND_OR_com = AND_OR->value;
 
         int output = Execute(first_cmd, AND_OR->previous);
-        printf("Out of left &&...\n");
+        // printf("Out of left &&...\n");
         // wait(NULL);
         //Expression * output_com = output->value;
         if(AND_OR_com->operators == AND){
@@ -789,10 +789,10 @@ int Execute(node * first_cmd, node * last_cmd){
         // free(AND_OR_com);
     }
     
-    printf("Start searching Pipes...\n");
+    // printf("Start searching Pipes...\n");
     // Pipes
     node * PIPE_node = Search_PIPE(first_cmd, last_cmd);
-    printf("Out of found PIPE method...\n");
+    // printf("Out of found PIPE method...\n");
     Expression * PIPE_node_com;
     //if(PIPE_node != NULL)
         
@@ -839,7 +839,7 @@ int Execute(node * first_cmd, node * last_cmd){
             close(fd[0]);
             dup2(fd[1], STDOUT_FILENO);
             close(fd[1]);
-            printf("I'm in execute 1...\n");
+            // printf("I'm in execute 1...\n");
             Execute(first_cmd, PIPE_node->previous);
             // execvp(myargs[0], myargs);
             // exit(0);
@@ -901,7 +901,7 @@ int Execute(node * first_cmd, node * last_cmd){
                 if(remove("exit")){}
             }
         }
-        printf("found a Pipe...\n");
+        // printf("found a Pipe...\n");
         return output;
 
 
@@ -948,7 +948,7 @@ int Execute(node * first_cmd, node * last_cmd){
     }
 
     
-    printf("Starting If Else part...\n");
+    // printf("Starting If Else part...\n");
     // If Else
     // Si se llego hasta aca fue debido a que no se encontraron ni PIPES, ni || o && en la lista de Comandos que tenemos desde el inicio hasta este punto
     // Luego tomamos el If que nos queda y ejecutamos el codigo de la siguiente forma: Buscamos hasta que encontremos un Then, ejecutamos el If y luego dependiendo 
@@ -992,7 +992,7 @@ int Execute(node * first_cmd, node * last_cmd){
     // if(IF_ELSE_node != NULL)
     //     free(IF_ELSE_node);
 
-    printf("Starting to solve leaves...\n");
+    // printf("Starting to solve leaves...\n");
 
     // Leaves
     return Solve_Leaves(first_cmd, last_cmd);
