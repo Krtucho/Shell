@@ -208,7 +208,6 @@ enum OPERATORS{
     GET=7,
     UNSET=8,
     SET=9,
-    GET=10,
     AND = 20,
     OR = 21,
     PIPE = 22,
@@ -222,7 +221,6 @@ enum OPERATORS{
     REDIRLESS=30,
     ARCHIVE=31,
     DOUBLEREDIRBIG=32
-    
 }OPERATORS;
 
 typedef struct Expression// TODO: Cambiar nombre a: Expression
@@ -344,8 +342,33 @@ int FALSE_CODE(node* exp){
 bool inside_pipe = false;
 
 int EXIT_CODE(node* exp){
-    if(inside_pipe)
-        return 0;
+    // printf("Inside EXIT_CODE METHOD\n");
+    // if(inside_pipe){
+    //     // printf("Inside pipe was True...\n");
+        // printf("%d",0);
+        // pid_t rc = fork();
+        // if (rc < 0) { // fork failed; exit
+        //     fprintf(stderr, "fork failed\n");
+        //     exit(1);
+        // } else if (rc == 0) { // child (new process)
+        //     exit(0);
+        // }
+        // else { // parent goes down this path (main)
+        //     int *status=0;
+        //     pid_t p=waitpid(rc,status,0);
+            //exit(1);
+            //kill(rc, SIGKILL);
+            // signal(SIGCHLD, handler(SIGKILL));
+            // int child_pid = waitpid(-1, status, WNOHANG);
+            // printf("%d\n", child_pid);
+            //int wc = wait(NULL);
+            // fclose(stdin);
+            // fclose(stdout);
+        //     kill(rc, SIGKILL);
+        // }
+    //     // write(STDOUT_FILENO, 0, 1);
+    //     return 0;
+    // }
     exit(0);
     return 0;
 }
@@ -910,22 +933,22 @@ int Execute(node * first_cmd, node * last_cmd){
 int main(int argc, char const *argv[])
 {
 
-    Expression * c = (Expression*)malloc(sizeof(Expression));
-    c->name=strdup("if"); 
-    c->operators = IF;
-    c->std_in=NULL;
+    // Expression * c = (Expression*)malloc(sizeof(Expression));
+    // c->name=strdup("if"); 
+    // c->operators = IF;
+    // c->std_in=NULL;
 
-    Expression * a = (Expression*)malloc(sizeof(Expression));
-    a->name = strdup("ls");
-    a->operators = SIMPLE_EXPRESSION;
+    // Expression * a = (Expression*)malloc(sizeof(Expression));
+    // a->name = strdup("ls");
+    // a->operators = SIMPLE_EXPRESSION;
 
-    Expression * b = (Expression*)malloc(sizeof(Expression));
-    b->name = strdup("-i");
-    b->operators = ARGS;
+    // Expression * b = (Expression*)malloc(sizeof(Expression));
+    // b->name = strdup("-i");
+    // b->operators = ARGS;
 
-    Expression * b1 = (Expression*)malloc(sizeof(Expression));
-    b1->name = strdup("|");
-    b1->operators = PIPE;
+    // Expression * b1 = (Expression*)malloc(sizeof(Expression));
+    // b1->name = strdup("|");
+    // b1->operators = PIPE;
 
      Expression * b2 = (Expression*)malloc(sizeof(Expression));
     b2->name = strdup("exit");
@@ -940,78 +963,78 @@ int main(int argc, char const *argv[])
     b4->operators = PIPE;
 
     Expression * d = (Expression*)malloc(sizeof(Expression));
-    d->name = strdup("wc");
+    d->name = strdup("cat");
     d->operators = SIMPLE_EXPRESSION;
 
     // Expression * d1 = (Expression*)malloc(sizeof(Expression));
     // d1->name = strdup("exit");
     // d1->operators = EXIT;
 
-    Expression * d2 = (Expression*)malloc(sizeof(Expression));
-    d2->name = strdup("&&");
-    d2->operators = AND;
+    // Expression * d2 = (Expression*)malloc(sizeof(Expression));
+    // d2->name = strdup("&&");
+    // d2->operators = AND;
 
-    Expression * d3 = (Expression*)malloc(sizeof(Expression));
-    d3->name = strdup("echo");
-    d3->operators = SIMPLE_EXPRESSION;
+    // Expression * d3 = (Expression*)malloc(sizeof(Expression));
+    // d3->name = strdup("echo");
+    // d3->operators = SIMPLE_EXPRESSION;
 
-    Expression * d4 = (Expression*)malloc(sizeof(Expression));
-    d4->name = strdup("bbb");
-    d4->operators = ARGS;
+    // Expression * d4 = (Expression*)malloc(sizeof(Expression));
+    // d4->name = strdup("bbb");
+    // d4->operators = ARGS;
 
-    Expression * e = (Expression*)malloc(sizeof(Expression));
-    e->name = strdup("then");
-    e->operators = THEN;
+    // Expression * e = (Expression*)malloc(sizeof(Expression));
+    // e->name = strdup("then");
+    // e->operators = THEN;
 
-    Expression * f = (Expression*)malloc(sizeof(Expression));
-    f->name = strdup("echo");
-    f->operators = SIMPLE_EXPRESSION;
+    // Expression * f = (Expression*)malloc(sizeof(Expression));
+    // f->name = strdup("echo");
+    // f->operators = SIMPLE_EXPRESSION;
 
-    Expression * g = (Expression*)malloc(sizeof(Expression));
-    g->name = strdup("b");
-    g->operators = ARGS;
+    // Expression * g = (Expression*)malloc(sizeof(Expression));
+    // g->name = strdup("b");
+    // g->operators = ARGS;
 
 
-    // Testing ls -i | grep u | wc
-    Expression * h = (Expression*)malloc(sizeof(Expression));
-    h->name = strdup("else");
-    h->operators = ELSE;
+    // // Testing ls -i | grep u | wc
+    // Expression * h = (Expression*)malloc(sizeof(Expression));
+    // h->name = strdup("else");
+    // h->operators = ELSE;
 
-    Expression * i = (Expression*)malloc(sizeof(Expression));
-    i->name = strdup("exit");
-    i->operators = EXIT;
+    // Expression * i = (Expression*)malloc(sizeof(Expression));
+    // i->name = strdup("exit");
+    // i->operators = EXIT;
 
-    Expression * j = (Expression*)malloc(sizeof(Expression));
-    j->name = strdup("end");
-    j->operators = END;
+    // Expression * j = (Expression*)malloc(sizeof(Expression));
+    // j->name = strdup("end");
+    // j->operators = END;
 
     // Expression * k = (Expression*)malloc(sizeof(Expression));
     // k->name = strdup("end");
     // k->operators = END;
 
-    list * l = init_list(c);
+    list * l = init_list(b2);
 
     //push_back(l, c);
-    push_back(l, a);
-    push_back(l, b);
-    push_back(l, b1);
+    // push_back(l, a);
+    // push_back(l, b);
+    // push_back(l, b1);
     push_back(l, b2);
     // push_back(l, b3);
     push_back(l, b4);
     push_back(l, d);
     // push_back(l, d1);
-    push_back(l, d2);
-    push_back(l, d3);
-    push_back(l, d4);
-    //push_back(l, d);
-    push_back(l, e);
-    push_back(l, f);
+    // push_back(l, d2);
+    // push_back(l, d3);
+    // push_back(l, d4);
+    // //push_back(l, d);
+    // push_back(l, e);
+    // push_back(l, f);
     
 
-    push_back(l, g);
-    push_back(l, h);
-    push_back(l, i);
-    push_back(l, j);
+    // push_back(l, g);
+    // push_back(l, h);
+    // push_back(l, i);
+    // push_back(l, j);
     //push_back(l, k);
 // push_back(l, d);
     // &&
