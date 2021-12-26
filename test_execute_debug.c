@@ -457,6 +457,14 @@ int SET_CODE(node* exp){
         last_exp = NULL;
 
     int count = 0;
+    while(last_com != NULL && (last_com->operators == ARGS || last_com->operators== ARCHIVE)){// Con ARGS me refiero a los argumentos lo q aun no se bien como ponerle
+        count++;
+        last = last->next;
+        if(last != NULL)
+            last_com = last->value;
+        else
+            last_com = NULL;
+    }
     // while(last_com != NULL && (last_com->operators == ARGS || last_com->operators== ARCHIVE)){// Con ARGS me refiero a los argumentos lo q aun no se bien como ponerle
     //     count++;
     //     last = last->next;
