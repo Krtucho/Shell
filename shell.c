@@ -210,6 +210,7 @@ enum OPERATORS{
     UNSET=8,
     SET=9,
     //GET=10,
+    SET_CHARACTER=19,
     AND = 20,
     OR = 21,
     PIPE = 22,
@@ -241,10 +242,10 @@ typedef struct Expression// TODO: Cambiar nombre a: Expression
 
 #pragma region Utiles
 
-static char *special_strings[] = {"true","false","exit","cd","history","help","set","get","unset","&&","||",
+static char *special_strings[] = {"true","false","exit","cd","history","help","set","`","get","unset","&&","||",
                         "|","if",">","then","else","end","<",">>" };
 
-static int specials_operators[] = { TRUE, FALSE, EXIT,CD, HISTORY, HELP,SET, GET, UNSET,AND , OR,
+static int specials_operators[] = { TRUE, FALSE, EXIT,CD, HISTORY, HELP,SET,SET_CHARACTER, GET, UNSET,AND , OR,
                 PIPE,IF,REDIRBIG,THEN, ELSE,END,REDIRLESS,DOUBLEREDIRBIG};
 
 void ConcatChar(char c, char *chain)
@@ -290,7 +291,13 @@ void EndReadLine(char* strline,bool history)
     }
 }
 
-
+Expression* GetStructExpression(char* name, int op)
+{
+    Expression * exp = (Expression*)malloc(sizeof(Expression));//para guardar la primera expresion
+    exp->name=name;
+    exp->operators=op;
+    return exp;
+}
 
 
 #pragma endregion
@@ -305,6 +312,7 @@ int SpecialCaracter(char c)//devuelve si es un caracter especial simple
     if(c=='|')return 1;
     if(c=='<')return 1;
     if(c=='>')return 1;
+    if(c=='`')return 1;
     return 0;
 }
 
@@ -316,6 +324,7 @@ int SpecialCaracters(char* c)//devuelve si es un caracter especial en general
     if(strcmp(c,"|")==0)return 1;
     if(strcmp(c,"<")==0)return 1;
     if(strcmp(c,">")==0)return 1;
+    if(strcmp(c,"`")==0)return 1;
     if(strcmp(c,"&&")==0)return 1;
     if(strcmp(c,"||")==0)return 1;
     if(strcmp(c,">>")==0)return 1;
@@ -377,7 +386,7 @@ void EjecuteLine(list* line)
     command=false;
     if(SpecialCaracters(temp)){command=true;special_caracter_last=true;}
     if(IfCommand(temp))command=true;
-    
+    if(RedirCaracter(temp)) archive=true;
     //free(temp);//verificar si esta bien liberar aqui
 
     //node* current=exp_line->head;
@@ -392,26 +401,34 @@ void EjecuteLine(list* line)
         //current=current->next;
         //current->value->name=temp;
 
-        Expression * exp = (Expression*)malloc(sizeof(Expression));//para crear cada expresion de la lista de expresiones
-        exp->name=strdup(temp);
+        //Expression * exp = (Expression*)malloc(sizeof(Expression));//para crear cada expresion de la lista de expresiones
+        char* name=strdup(temp);
         bool special_caracter_now=SpecialCaracters(temp);//la expresion actual es un caracter especial
         if(special_caracter_last && special_caracter_now){printf("syntax error near unexpected token `%s'",temp); return;}
         if(if_caracter_last && !RedirCaracter(temp)){printf("syntax error near unexpected token `%s'",temp); return;}
         if(special_caracter_last)command=true;
-        if(RedirCaracter(temp)) archive=true;
 
-        exp->operators=GetOperator(temp);
-        if(exp->operators==SIMPLE_EXPRESSION)
+        //exp->operators=GetOperator(temp);
+        int op=GetOperator(temp);
+        //if(exp->operators==SIMPLE_EXPRESSION)
+        if(op==SIMPLE_EXPRESSION)
         {
-            if(!command)exp->operators=ARGS;//Si no estamos esperando un comando entonces estamos en presencia de un argumento
-            if(archive)exp->operators=ARCHIVE;//Si la expresion anterior es un caracter especial de redireccion shora estamos en presencia de un archivo
+            //if(!command)exp->operators=ARGS;//Si no estamos esperando un comando entonces estamos en presencia de un argumento
+            //if(archive)exp->operators=ARCHIVE;//Si la expresion anterior es un caracter especial de redireccion shora estamos en presencia de un archivo
+            if(!command)op=ARGS;//Si no estamos esperando un comando entonces estamos en presencia de un argumento
+            if(archive)op=ARCHIVE;//Si la expresion anterior es un caracter especial de redireccion shora estamos en presencia de un archivo
+
+
         }    
         command=false;
         archive=false;
+        if(RedirCaracter(temp)) archive=true;
 
         special_caracter_last=special_caracter_now;
-        push_back(exp_line,exp);
-        printf("%s:%d\n",exp->name,exp->operators);
+        push_back(exp_line,GetStructExpression(name, op));
+        //printf("%s:%d\n",exp->name,exp->operators);
+        printf("%s:%d\n",name,op);
+
         free(pop_front(line));
     
     }
@@ -507,6 +524,7 @@ void ReadAndEjecuteLine(list* line,char* word, char c)//crea una lista de string
 
             if(SpecialCaracters(word))///Si es un caracter normal pero esta pegado a un caracter especial anterior
             {
+                if(c==' ')c=GetOneChar(strline,history);
                 push_back(line, strdup(word));//saco el caracter especial para la lista y renuevo a word
                 strcpy(word,"");
                 ConcatChar(c,word);
