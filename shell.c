@@ -1239,22 +1239,22 @@ void EjecuteLine(list* line)
     }
 
     ////Descomentar esto desde aqui
-    int _pid =fork();
-    if(_pid==0)
-    {
+    // int _pid =fork();
+    // if(_pid==0)
+    // {
     Execute(exp_line->head,exp_line->tail);
 
-    }
-    else if(_pid>0)
-    {
-        return;
-    }
-    else
-    {
-        int *status=0;
-        waitpid(_pid,status,0);
+    // }
+    // else if(_pid>0)
+    // {
+    //     return;
+    // }
+    // else
+    // {
+    //     int *status=0;
+    //     waitpid(_pid,status,0);
 
-    }
+    // }
 ////Descomentar esto hasta aqui
 
     // fclose(stdin);
@@ -1269,7 +1269,7 @@ void ReadAndEjecuteLine(list* line,char* word, char c)//crea una lista de string
     char *strline=(char*)calloc(sizeof(char),500);
     if(history)ConcatChar(c,strline);
 
-    while(c!= '\n')
+    while(c!= '\n' && c!= EOF)
         {
          
             if(c=='#')
@@ -1338,7 +1338,7 @@ void ReadAndEjecuteLine(list* line,char* word, char c)//crea una lista de string
                 //lo termino de conformar.
                 {
                     ConcatChar(c,word);
-                    if(!SpecialCaracters(word))
+                    if(!SpecialCaracters(word) && strlen(word)!=1)
                     {
                         printf("syntax error near unexpected token '%c' \n",c);
                         strcpy(word,"");
@@ -1401,7 +1401,8 @@ void ReadAndEjecuteLine(list* line,char* word, char c)//crea una lista de string
         free(word);
         pop_front(line);
         //print_list(line);
-        EjecuteLine(line);
+
+        if(line->head!=NULL) EjecuteLine(line);
 
         //free_list(line);
 
