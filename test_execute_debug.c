@@ -291,9 +291,9 @@ void Run(node * com){
                     com_prev = com->previous->previous->value;
 
                     if(com_prev->operators == EXIT && com_to_exec->std_in==NULL){
-                        com_prev->std_in=com_prev->name;
+                        com_to_exec->std_in=strdup(com_prev->name);
                         FILE * fp;
-                        fp = freopen(com_prev->std_in,"w", stdin);
+                        fp = freopen(com_to_exec->std_in,"w", stdin);
                         fclose(fp);
 
 
@@ -1019,16 +1019,16 @@ int main(int argc, char const *argv[])
     // b1->operators = PIPE;
 
      Expression * b2 = (Expression*)malloc(sizeof(Expression));
-    b2->name = strdup("echo");
-    b2->operators = SIMPLE_EXPRESSION;
+    b2->name = strdup("exit");
+    b2->operators = EXIT;
 
      Expression * b3 = (Expression*)malloc(sizeof(Expression));
-    b3->name = strdup("u");
-    b3->operators = ARGS;
+    b3->name = strdup("|");
+    b3->operators = PIPE;
 
      Expression * b4 = (Expression*)malloc(sizeof(Expression));
-    b4->name = strdup(">");
-    b4->operators = REDIRBIG;
+    b4->name = strdup("wc");
+    b4->operators = SIMPLE_EXPRESSION;
 
     Expression * d = (Expression*)malloc(sizeof(Expression));
     d->name = strdup("d.txt");
@@ -1090,7 +1090,7 @@ int main(int argc, char const *argv[])
     // push_back(l, b2);
     push_back(l, b3);
     push_back(l, b4);
-    push_back(l, d);
+    // push_back(l, d);
     // push_back(l, d1);
     // push_back(l, d2);
     // push_back(l, d3);
