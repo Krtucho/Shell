@@ -643,7 +643,7 @@ node * SolveLessRedir(node * first_cmd, node * last_cmd){
         current_exp = current->value;
         if(current_exp->operators == REDIRLESS){
             printf("Inside current REDIRLESS if...\n");
-            printf("current_exp.name = %s", current_exp->operators);
+            printf("current_exp.name = %d", current_exp->operators);
             input=current->next;
             break;
         }
