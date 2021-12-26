@@ -292,25 +292,25 @@ void Run(node * com){
 
                     if(com_prev->operators == EXIT && com_to_exec->std_in==NULL){
                         com_prev->std_in=com_prev->name;
+                        FILE * fp;
+                        fp = freopen(com_prev->std_in,"w", stdin);
+                        fclose(fp);
 
-                        freopen(com_prev->std_in,"w", stdin);
-                        // fclose(stdin);
 
-
-                        freopen(com_to_exec->std_in,"r", stdin);
+                        fp = freopen(com_to_exec->std_in,"r", stdin);
 
                         int e = execvp(myargs[0], myargs);
-                        fclose(stdin);
+                        fclose(fp);
                     }
                 }
             }
         }
 
-
+        FILE * fp;
         if(com_to_exec->std_in != NULL){
             // printf("com_to_exec->std_in != NULL..\n");
 
-            freopen(com_to_exec->std_in,"r", stdin);
+            fp = freopen(com_to_exec->std_in,"r", stdin);
         }
         // char buf[10];
         // int num = read(STDIN_FILENO, buf, sizeof(buf));
@@ -318,7 +318,7 @@ void Run(node * com){
         int e = execvp(myargs[0], myargs);
 
         if(com_to_exec->std_in != NULL){
-            fclose(stdin);
+            fclose(fp);
         }
 
         
@@ -602,28 +602,27 @@ int SolveBiggerRedir(node * first_cmd, node * last_cmd, int exp_out){
             fclose(fp);
             output=current_next;
 
-            continue;
+            // continue;
 
         }
-        if(current_exp->operators==DOUBLEREDIRBIG)
+        else if(current_exp->operators==DOUBLEREDIRBIG)
         {
             Expression *current_next=current->next->value;
             fp = freopen(current_next->name, "a", stdout);
             fclose(fp);
             output=current_next;
-            continue;
+            // continue;
 
         }
         current=current->next;
     }
     if(output!=NULL){
-    
-        fp=freopen(output->name,"a",stdout);
         Expression * exp=first_cmd->value;
+        fp=freopen(output->name,"a",stdout);
         printf("%s \n", exp->std_out);
         fclose(fp);
 
-        exp->std_out="1";
+        // exp->std_out="1";
         redir_found = true;
     }
 
@@ -971,10 +970,11 @@ int Execute(node * first_cmd, node * last_cmd){
             // Ejecuta el Then
             return Execute(THEN_node->next, ELSE_node->previous);
         }
-        else{
+        else if(ELSE_node != NULL){
             // Ejecuta el Else
             return Execute(ELSE_node->next, END_node->previous);
         }
+        return 0;
 
         // Si encuentra un IF_ELSE entra en el ciclo
         // IF_ELSE_node = Search_IF_THEN_ELSE(first_cmd, last_cmd, IF_ELSE);
@@ -1019,20 +1019,20 @@ int main(int argc, char const *argv[])
     // b1->operators = PIPE;
 
      Expression * b2 = (Expression*)malloc(sizeof(Expression));
-    b2->name = strdup("exit");
-    b2->operators = EXIT;
+    b2->name = strdup("echo");
+    b2->operators = SIMPLE_EXPRESSION;
 
-    //  Expression * b3 = (Expression*)malloc(sizeof(Expression));
-    // b3->name = strdup("u");
-    // b3->operators = ARGS;
+     Expression * b3 = (Expression*)malloc(sizeof(Expression));
+    b3->name = strdup("u");
+    b3->operators = ARGS;
 
      Expression * b4 = (Expression*)malloc(sizeof(Expression));
-    b4->name = strdup("|");
-    b4->operators = PIPE;
+    b4->name = strdup(">");
+    b4->operators = REDIRBIG;
 
     Expression * d = (Expression*)malloc(sizeof(Expression));
-    d->name = strdup("wc");
-    d->operators = SIMPLE_EXPRESSION;
+    d->name = strdup("d.txt");
+    d->operators = ARCHIVE;
     d->std_in = NULL;
 
     Expression * d1 = (Expression*)malloc(sizeof(Expression));
@@ -1088,7 +1088,7 @@ int main(int argc, char const *argv[])
     // push_back(l, b);
     // push_back(l, b1);
     // push_back(l, b2);
-    // push_back(l, b3);
+    push_back(l, b3);
     push_back(l, b4);
     push_back(l, d);
     // push_back(l, d1);
