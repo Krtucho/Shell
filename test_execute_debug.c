@@ -281,7 +281,51 @@ void Run(node * com){
         fprintf(stderr, "fork failed\n");
         exit(1);
     } else if (rc == 0) { // child (new process)
+
+        Expression * com_prev;// = com->previous;
+        if(com->previous != NULL){
+            com_prev = com->previous->value;
+
+            if(com_prev->operators == PIPE){
+                if(com->previous->previous != NULL){
+                    com_prev = com->previous->previous->value;
+
+                    if(com_prev->operators == EXIT && com_to_exec->std_in==NULL){
+                        com_prev->std_in=com_prev->name;
+
+                        freopen(com_prev->std_in,"w", stdin);
+                        // fclose(stdin);
+
+
+                        freopen(com_to_exec->std_in,"r", stdin);
+
+                        int e = execvp(myargs[0], myargs);
+                        fclose(stdin);
+                    }
+                }
+            }
+        }
+
+
+        if(com_to_exec->std_in != NULL){
+            // printf("com_to_exec->std_in != NULL..\n");
+
+            freopen(com_to_exec->std_in,"r", stdin);
+        }
+        // char buf[10];
+        // int num = read(STDIN_FILENO, buf, sizeof(buf));
+        // printf("%d\n",num);
         int e = execvp(myargs[0], myargs);
+
+        if(com_to_exec->std_in != NULL){
+            fclose(stdin);
+        }
+
+        
+
+       
+
+        //int e = execvp(myargs[0], myargs);
         // fclose(stdin);
         // fclose(stdout);
         // kill(rc, SIGKILL);
@@ -343,8 +387,19 @@ bool inside_pipe = false;
 
 int EXIT_CODE(node* exp){
     // printf("Inside EXIT_CODE METHOD\n");
-    // if(inside_pipe){
-    //     // printf("Inside pipe was True...\n");
+    if(inside_pipe){
+        // Expression * next=exp->next->value;
+        // if(next->operators==PIPE)
+        // {
+        //     Expression * command_=exp->next->next->value;
+        //     command_->std_in=command_->name;
+        //     freopen(command_->std_in,"w", stdin);
+        //     fclose(stdin);
+
+        // }
+        
+        //FILE * fp;
+        //     // printf("Inside pipe was True...\n");
         // printf("%d",0);
         // pid_t rc = fork();
         // if (rc < 0) { // fork failed; exit
@@ -366,9 +421,13 @@ int EXIT_CODE(node* exp){
             // fclose(stdout);
         //     kill(rc, SIGKILL);
         // }
-    //     // write(STDOUT_FILENO, 0, 1);
-    //     return 0;
-    // }
+        //     // write(STDOUT_FILENO, 0, 1); 
+        //Expression * current=exp->value;
+        //fp = freopen(current->name, "w", stdout);
+        //fclose(fp);
+        // exit(0);
+        return 0;
+    }
     exit(0);
     return 0;
 }
@@ -834,6 +893,15 @@ int Execute(node * first_cmd, node * last_cmd){
        // wait(NULL);
         // }
         inside_pipe = false;
+
+        Expression * com_prev;// = com->previous;
+        if(PIPE_node->previous != NULL){
+            com_prev = PIPE_node->previous->value;
+
+            if(com_prev->operators == EXIT ){
+                if(remove("exit")){}
+            }
+        }
         printf("found a Pipe...\n");
         return output;
 
@@ -963,16 +1031,17 @@ int main(int argc, char const *argv[])
     b4->operators = PIPE;
 
     Expression * d = (Expression*)malloc(sizeof(Expression));
-    d->name = strdup("cat");
+    d->name = strdup("wc");
     d->operators = SIMPLE_EXPRESSION;
+    d->std_in = NULL;
 
-    // Expression * d1 = (Expression*)malloc(sizeof(Expression));
-    // d1->name = strdup("exit");
-    // d1->operators = EXIT;
+    Expression * d1 = (Expression*)malloc(sizeof(Expression));
+    d1->name = strdup("<");
+    d1->operators = REDIRLESS;
 
-    // Expression * d2 = (Expression*)malloc(sizeof(Expression));
-    // d2->name = strdup("&&");
-    // d2->operators = AND;
+    Expression * d2 = (Expression*)malloc(sizeof(Expression));
+    d2->name = strdup("exit");
+    d2->operators = ARCHIVE;
 
     // Expression * d3 = (Expression*)malloc(sizeof(Expression));
     // d3->name = strdup("echo");
@@ -1018,7 +1087,7 @@ int main(int argc, char const *argv[])
     // push_back(l, a);
     // push_back(l, b);
     // push_back(l, b1);
-    push_back(l, b2);
+    // push_back(l, b2);
     // push_back(l, b3);
     push_back(l, b4);
     push_back(l, d);
