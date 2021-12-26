@@ -255,15 +255,6 @@ void ConcatChar(char c, char *chain)
     strcat(chain, temp);
 }
 
-void EndReadLine(char c)
-{
-    //char c=getchar();
-    while(c!= '\n')    
-    {
-        c=getchar();
-    }
-}
-
 int GetIndexOF(char* word)
 {
     for (int i = 0; i < 19/*sizeof(special_strings)*/; i++)
@@ -282,6 +273,25 @@ int GetOperator(char* word)
     }
     return specials_operators[index];
 }
+
+char GetOneChar(char* strline,bool history)
+{
+    char c=getchar();
+    if(history)ConcatChar(c,strline);
+    return c;
+}
+
+void EndReadLine(char* strline,bool history)
+{
+    char c;//=GetOneChar();
+    while(c!= '\n')    
+    {
+        c=GetOneChar(strline,history);
+    }
+}
+
+
+
 
 #pragma endregion
 
@@ -387,6 +397,7 @@ void EjecuteLine(list* line)
     bool special_caracter_now=SpecialCaracters(temp);//la expresion actual es un caracter especial
     if(special_caracter_last && special_caracter_now){printf("syntax error near unexpected token `%s'",temp); return;}
     if(if_caracter_last && !RedirCaracter(temp)){printf("syntax error near unexpected token `%s'",temp); return;}
+    if(special_caracter_last)command=true;
     if(RedirCaracter(temp)) archive=true;
 
     exp->operators=GetOperator(temp);
@@ -406,17 +417,34 @@ void EjecuteLine(list* line)
 
 void ReadAndEjecuteLine(list* line,char* word, char c)//crea una lista de string por cada instruccion y luego manda a ejecutarlas
 {
+    bool history=true;
+    if(c==' ')history=false;
+    char *strline=(char*)calloc(sizeof(char),500);
+    if(history)ConcatChar(c,strline);
+
     while(c!= '\n')
         {
          
             if(c=='#')
             {
-                EndReadLine(c);
+                EndReadLine(strline,history);
                 break;
             }
 
             if(c=='&')
             {
+                if(strcmp(word,"")!=0)
+                {
+                    push_back(line, strdup(word));
+                    strcpy(word,"");
+                }
+                ConcatChar(c,word);                    
+                c=GetOneChar(strline,history);
+
+                if(c!='&')
+                {
+                    EndReadLine(strline,history);//Hacer el background
+                }
                 /////mandar el proceso actual a background
                 /////verificar que primero se busca un and para despues comprobar que sea un &
             }
@@ -438,7 +466,8 @@ void ReadAndEjecuteLine(list* line,char* word, char c)//crea una lista de string
                 free_list(line);
                 line=init_list("init");
 
-                c=getchar();
+                c=GetOneChar(strline,history);
+                //c=GetOneChar();
                 continue;
             }
             
@@ -456,10 +485,10 @@ void ReadAndEjecuteLine(list* line,char* word, char c)//crea una lista de string
                         strcpy(word,"");
                         free_list(line);
                         line=init_list("init");
-                        EndReadLine(c);
+                        EndReadLine(strline,history);
                         return;
                     }
-                    c=getchar();
+                    c=GetOneChar(strline,history);
                     continue;
                 }
                 
@@ -467,7 +496,8 @@ void ReadAndEjecuteLine(list* line,char* word, char c)//crea una lista de string
                    strcpy(word,"");
                    ConcatChar(c,word);
                    
-                   c=getchar();
+                   c=GetOneChar(strline,history);
+                   //c=GetOneChar();
                    continue;      
                 
             }
@@ -477,7 +507,8 @@ void ReadAndEjecuteLine(list* line,char* word, char c)//crea una lista de string
                 push_back(line, strdup(word));//saco el caracter especial para la lista y renuevo a word
                 strcpy(word,"");
                 ConcatChar(c,word);
-                c=getchar();
+                c=GetOneChar(strline,history);
+                //c=GetOneChar();
                 continue;
                 
             }
@@ -486,20 +517,23 @@ void ReadAndEjecuteLine(list* line,char* word, char c)//crea una lista de string
             {
                 if(word[0]=='\0')
                 {
-                    c=getchar();
+                    c=GetOneChar(strline,history);
+                    //c=GetOneChar();
                     continue;
                     
                 }
                 push_back(line, strdup(word));
 
                 strcpy(word,"");///vacio a word para comenzar una nueva palabra
-                c=getchar();
+                c=GetOneChar(strline,history);
+                //c=GetOneChar();
                 continue;
             }
             
             //if(concat)
             ConcatChar(c,word);
-            c=getchar();
+            c=GetOneChar(strline,history);
+            //c=GetOneChar();
         }
 
         push_back(line, strdup(word));
@@ -510,7 +544,7 @@ void ReadAndEjecuteLine(list* line,char* word, char c)//crea una lista de string
         EjecuteLine(line);
         //free_list(line);
 
-    
+    printf("\n HISTORY: %s \n",strline);
 }
 
 void Shell()
