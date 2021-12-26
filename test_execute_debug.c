@@ -208,6 +208,7 @@ enum OPERATORS{
     GET=7,
     UNSET=8,
     SET=9,
+    SET_CHARACTER=19,
     AND = 20,
     OR = 21,
     PIPE = 22,
@@ -233,6 +234,12 @@ typedef struct Expression// TODO: Cambiar nombre a: Expression
     enum OPERATORS operators;
 }Expression;
 
+#pragma endregion
+
+#pragma region 
+// typedef struct VARIABLE{
+    
+// }
 #pragma endregion
 
 void Run(node * com){
@@ -315,6 +322,8 @@ void Run(node * com){
         // char buf[10];
         // int num = read(STDIN_FILENO, buf, sizeof(buf));
         // printf("%d\n",num);
+
+        // FILE * fp_out = freopen(com_to_exec.)
         int e = execvp(myargs[0], myargs);
 
         if(com_to_exec->std_in != NULL){
@@ -433,7 +442,6 @@ int EXIT_CODE(node* exp){
 }
 
 int SET_CODE(node* exp){
-    // printf("Inside Run Method...\n");
     Expression * com_to_exec = exp->value;
     if(com_to_exec->operators != SET)
         return -1;
@@ -466,7 +474,12 @@ int (*testing[])(node*) = {
         FALSE_CODE,
         SIMPLE_Expression_CODE,
         EXIT_CODE,
-        SET_CODE,
+        CD_CODE=4,
+        HISTORY_CODE=5,
+        HELP_CODE=6,
+        GET_CODE=7,
+        UNSET_CODE=8,
+        SET_CODE=9,
         // GET_CODE,
         // UNSET_CODE,
         0
