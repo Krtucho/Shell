@@ -371,14 +371,14 @@ void EjecuteLine(list* line)
     list* exp_line=init_list(exp1); //linea de expresiones clasificadas
     printf("%s:%d\n",exp1->name,exp1->operators);
 
-    free(exp1);///verificar si esta bien liberar aqui
+    //free(exp1);///verificar si esta bien liberar aqui
     //printf("%s:%d",exp_line->head->value->name,exp1->operators);
 
     command=false;
     if(SpecialCaracters(temp)){command=true;special_caracter_last=true;}
     if(IfCommand(temp))command=true;
     
-    free(temp);//verificar si esta bien liberar aqui
+    //free(temp);//verificar si esta bien liberar aqui
 
     //node* current=exp_line->head;
 
@@ -392,24 +392,27 @@ void EjecuteLine(list* line)
         //current=current->next;
         //current->value->name=temp;
 
-    Expression * exp = (Expression*)malloc(sizeof(Expression));//para crear cada expresion de la lista de expresiones
-    exp->name=strdup(temp);
-    bool special_caracter_now=SpecialCaracters(temp);//la expresion actual es un caracter especial
-    if(special_caracter_last && special_caracter_now){printf("syntax error near unexpected token `%s'",temp); return;}
-    if(if_caracter_last && !RedirCaracter(temp)){printf("syntax error near unexpected token `%s'",temp); return;}
-    if(special_caracter_last)command=true;
-    if(RedirCaracter(temp)) archive=true;
+        Expression * exp = (Expression*)malloc(sizeof(Expression));//para crear cada expresion de la lista de expresiones
+        exp->name=strdup(temp);
+        bool special_caracter_now=SpecialCaracters(temp);//la expresion actual es un caracter especial
+        if(special_caracter_last && special_caracter_now){printf("syntax error near unexpected token `%s'",temp); return;}
+        if(if_caracter_last && !RedirCaracter(temp)){printf("syntax error near unexpected token `%s'",temp); return;}
+        if(special_caracter_last)command=true;
+        if(RedirCaracter(temp)) archive=true;
 
-    exp->operators=GetOperator(temp);
-    if(exp->operators==SIMPLE_EXPRESSION)
-    {
-        if(!command)exp->operators=ARGS;//Si no estamos esperando un comando entonces estamos en presencia de un argumento
-        if(archive)exp->operators=ARCHIVE;//Si la expresion anterior es un caracter especial de redireccion shora estamos en presencia de un archivo
-    }    
-    special_caracter_last=special_caracter_now;
-    push_back(exp_line,exp);
-    printf("%s:%d\n",exp->name,exp->operators);
-    free(pop_front(line));
+        exp->operators=GetOperator(temp);
+        if(exp->operators==SIMPLE_EXPRESSION)
+        {
+            if(!command)exp->operators=ARGS;//Si no estamos esperando un comando entonces estamos en presencia de un argumento
+            if(archive)exp->operators=ARCHIVE;//Si la expresion anterior es un caracter especial de redireccion shora estamos en presencia de un archivo
+        }    
+        command=false;
+        archive=false;
+
+        special_caracter_last=special_caracter_now;
+        push_back(exp_line,exp);
+        printf("%s:%d\n",exp->name,exp->operators);
+        free(pop_front(line));
     
     }
 
@@ -544,7 +547,7 @@ void ReadAndEjecuteLine(list* line,char* word, char c)//crea una lista de string
         EjecuteLine(line);
         //free_list(line);
 
-    printf("\n HISTORY: %s \n",strline);
+    //printf("\n HISTORY: %s \n",strline);
 }
 
 void Shell()
