@@ -432,7 +432,11 @@ void Run(node * com){
         current=current->next;
     }
 
+    FILE * fp;
+    FILE * fp_out;
     pid_t rc = fork();
+    // char * buf;
+    
     if (rc < 0) { // fork failed; exit
         fprintf(stderr, "fork failed\n");
         exit(1);
@@ -448,7 +452,7 @@ void Run(node * com){
 
                     if(com_prev->operators == EXIT && com_to_exec->std_in==NULL){
                         com_to_exec->std_in=strdup(com_prev->name);
-                        FILE * fp;
+                        //FILE * fp;
                         fp = freopen(com_to_exec->std_in,"w", stdin);
                         fclose(fp);
 
@@ -462,24 +466,35 @@ void Run(node * com){
             }
         }
 
-        FILE * fp;
+
+        //FILE * fp;
+        
         if(com_to_exec->std_in != NULL){
             // printf("com_to_exec->std_in != NULL..\n");
 
             fp = freopen(com_to_exec->std_in,"r", stdin);
         }
-        // char buf[10];
-        // int num = read(STDIN_FILENO, buf, sizeof(buf));
-        // printf("%d\n",num);
-        int e = execvp(myargs[0], myargs);
-
-        if(com_to_exec->std_in != NULL){
-            fclose(fp);
-        }
-
         
+        // int num = read(STDOUT_FILENO, buf, sizeof(buf));
+        // printf("%d\n",num);
+        // printf("%s", buf);
 
-       
+        if(com != NULL && com->next != NULL){
+            
+            node * current = com;
+            Expression * exp;
+            
+            while(current != NULL){
+                exp = current->value;
+                if(exp->operators == REDIRBIG || exp->operators == DOUBLEREDIRBIG){
+                    fp_out = freopen("temp", "w", stdout);
+                    break;
+                }
+                current = current->next;
+            }
+        }
+        
+        int e = execvp(myargs[0], myargs);
 
         //int e = execvp(myargs[0], myargs);
         // fclose(stdin);
@@ -490,6 +505,12 @@ void Run(node * com){
     }
     else { // parent goes down this path (main)
         int *status=0;
+
+        // char message[20];
+        // read(STDOUT_FILENO, message, 20);
+        // printf("Buff: %s\n", buf);
+
+        
         pid_t p=waitpid(rc,status,0);
         //exit(1);
         //kill(rc, SIGKILL);
@@ -499,7 +520,18 @@ void Run(node * com){
         //int wc = wait(NULL);
         // fclose(stdin);
         // fclose(stdout);
+
+        if(com_to_exec->std_in != NULL){
+            if(fp != NULL)
+                fclose(fp);
+        }
+        if(fp_out != NULL)
+            fclose(fp_out);
+
+
         kill(rc, SIGKILL);
+
+        // printf("%s", message);
     }
     // close();
     // kill(rc, SIGKILL);
@@ -774,10 +806,28 @@ int SolveBiggerRedir(node * first_cmd, node * last_cmd, int exp_out){
     }
     if(output!=NULL){
         Expression * exp=first_cmd->value;
-        fp=freopen(output->name,"a",stdout);
-        printf("%s \n", exp->std_out);
-        fclose(fp);
 
+        FILE * fp_in=fopen("temp","r");
+        struct stat sb;
+
+        char * file_contents=malloc(sb.st_size);
+
+        fread(file_contents,sb.st_size,1,fp_in);
+
+        exp->std_out=strdup(file_contents);
+        // printf("%s", file_contents);
+        fclose(fp_in);
+
+        if(remove("temp")){}
+
+        FILE * fp_out = freopen(output->name,"a",stdout);
+        printf("%s \n", exp->std_out);
+        fclose(fp_out);
+
+        fflush(stdout);
+        fflush(stdin);
+        // close(STDIN_FILENO);
+        // close(STDOUT_FILENO);
         // exp->std_out="1";
         redir_found = true;
     }
@@ -1243,7 +1293,8 @@ void EjecuteLine(list* line)
     // if(_pid==0)
     // {
     Execute(exp_line->head,exp_line->tail);
-
+    // close(STDIN_FILENO);
+    // close(STDOUT_FILENO);
     // }
     // else if(_pid>0)
     // {
@@ -1416,6 +1467,8 @@ void Shell()
 
  while (1)
     {
+        printf("");
+        fflush(stdout);
         printf("\n my-shell $ ");
 
         char * word= (char*)calloc(sizeof(char),100);//word es cada una de las palabras que se mandan en un espacio de line
