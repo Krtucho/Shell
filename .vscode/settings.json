@@ -3,6 +3,9 @@
         "type_traits": "c",
         "stdbool.h": "c",
         "bin_tree.h": "c",
-        "execute.h": "c"
+        "execute.h": "c",
+        "stdlib.h": "c",
+        "unistd.h": "c",
+        "wait.h": "c"
     }
 }
