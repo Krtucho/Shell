@@ -213,9 +213,9 @@ enum OPERATORS{
     CD=6,
     HISTORY=4,
     HELP=5,
-    GET=7,
+    GET=9,
     UNSET=8,
-    SET=9,
+    SET=7,
     //GET=10,
     SET_CHARACTER=19,
     AND = 20,
@@ -440,10 +440,10 @@ void help_multipipe()
 
 }    
 
-// void help_controlc()
-// {
-
-// }
+void help_controlc()
+{
+    printf("\n  \n ");
+}
     
 
 
@@ -485,10 +485,10 @@ int HELP_CODE(node* argument)
 
     }
 
-    // else if(strcmp("ctr+c",argument)==0)
-    // {
-    //     help_controlc();
-    // }
+    else if(strcmp("ctr+c",next->name)==0)
+    {
+        help_controlc();
+    }
     else
     {
          printf("invalid help command `%s'",next->name);
@@ -508,7 +508,8 @@ int CD_CODE(node* argument)
         chdir("/home");
         return 1;
     }
-    if (chdir(node_temp->name) == -1)   
+    int chdir_result=chdir(node_temp->name);
+    if ( chdir_result == -1)   
     {
 
         printf("No se puede acceder a la direcci'on %s",node_temp->name);
@@ -517,26 +518,35 @@ int CD_CODE(node* argument)
     return 0;
 }
 
-bool did_ctrl_c=false;
+bool did_ctrl_c;
 int pid;
+int pid_inicial;
 void CtrlC()
 {
+ //   printf("\n PID inicial:%d\n",pid_inicial);
+  //  printf("PID actual:%d\n",pid);
+   // printf("Bool:%d\n",did_ctrl_c);
     if(did_ctrl_c)
     {
-
+        //pid=getpid();
+        //printf("%d",pid);
+        if(pid!=pid_inicial) kill(pid,9);
     }
     else
     {
         did_ctrl_c=true;
+        //kill(pid,SIGTERM);
     }
 }
 
-// void History()
-// {
+int HISTORY_CODE(node* argument)
+{
 
-// }
+
+    return 0;
+}
+
 #pragma endregion
-
 
 
 #pragma region Ejecucion
@@ -585,6 +595,9 @@ void Run(node * com){
     FILE * fp;
     FILE * fp_out;
     pid_t rc = fork();
+    pid=rc;
+    did_ctrl_c=false;
+
     // char * buf;
     
     if (rc < 0) { // fork failed; exit
@@ -804,9 +817,10 @@ int (*testing[])(node*) = {
         FALSE_CODE,
         SIMPLE_Expression_CODE,
         EXIT_CODE,
-        SET_CODE,
-        HELP_CODE,
+        HISTORY_CODE,
+        HELP_CODE,        
         CD_CODE,
+        SET_CODE,
         // GET_CODE,
         // UNSET_CODE,
         0
@@ -1193,6 +1207,8 @@ int Execute(node * first_cmd, node * last_cmd){
         inside_pipe = true;
         pipe(fd);
         pidC = fork();
+        pid=pidC;//getpid();
+        did_ctrl_c=false;
         if(pidC==0){
             close(fd[0]);
             dup2(fd[1], STDOUT_FILENO);
@@ -1647,7 +1663,14 @@ void Shell()
 
 int main(int argc, char const *argv[])
 {
-    //signal(SIGINT,CtrlC);
+    signal(SIGINT,CtrlC);
+    //fork();
+    pid=getpid();
+    pid_inicial=getpid();
+    did_ctrl_c=false;
+    //pid=fork();
+    //printf("%d",pid);
+    //if(pid!=0) Shell();
     Shell();
     return 0;
 }
