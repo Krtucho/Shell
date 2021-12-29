@@ -473,6 +473,7 @@ int HELP_CODE(node* argument)
     // {
     //     help_history();
     // }
+
     else if(strcmp("spaces",next->name)==0)
     {
         help_spaces();    return 0;
@@ -483,6 +484,7 @@ int HELP_CODE(node* argument)
         help_multipipe();    return 0;
 
     }
+
     // else if(strcmp("ctr+c",argument)==0)
     // {
     //     help_controlc();
@@ -499,7 +501,13 @@ int HELP_CODE(node* argument)
 
 int CD_CODE(node* argument)
 {
-    Expression * node_temp = argument->value;
+    Expression * node_temp;
+    if(argument->next!=NULL)node_temp = argument->next->value;
+    if (node_temp==NULL || node_temp->operators!=ARGS) 
+    {
+        chdir("/home");
+        return 1;
+    }
     if (chdir(node_temp->name) == -1)   
     {
 
@@ -509,19 +517,19 @@ int CD_CODE(node* argument)
     return 0;
 }
 
-// bool did_ctrl_c=false;
-// int pid;
-// void CtrlC()
-// {
-//     if(did_ctrl_c)
-//     {
+bool did_ctrl_c=false;
+int pid;
+void CtrlC()
+{
+    if(did_ctrl_c)
+    {
 
-//     }
-//     else
-//     {
-//         did_ctrl_c=true;
-//     }
-// }
+    }
+    else
+    {
+        did_ctrl_c=true;
+    }
+}
 
 // void History()
 // {
