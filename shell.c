@@ -210,9 +210,9 @@ enum OPERATORS{
     FALSE = 1,
     SIMPLE_EXPRESSION=2,
     EXIT=3,
-    CD=4,
-    HISTORY=5,
-    HELP=6,
+    CD=6,
+    HISTORY=4,
+    HELP=5,
     GET=7,
     UNSET=8,
     SET=9,
@@ -357,16 +357,166 @@ bool IfCommand(char* c)//devuelve si es una expresion del tipo if, else then o e
     return false;
 }
 
+bool PossibleArgumentExpression(int op)
+{
+    if(op == TRUE || op == FALSE || op == EXIT || op == CD || op == HISTORY || op == HELP || op == GET || op == UNSET || op == SET)
+    {
+        return true;
+    }    
+    return false;
+}
 
 #pragma endregion
 
 
 #pragma region Comandos Especiales
 
-void Help(Expression argument)
+
+void help_init()
 {
+    printf("Integrantes: Carlos Carret Miranda(C212)\n"
+                         "Lauren Guerra Hernandez(C212)\n"
+        "Funcionalidades:\n"
+        "basic: funcionalidades básicas (1-8)  (3 puntos)\n"
+        "multi-pipe: múltiples tuberías  (9)   (1 punto)\n"
+        "spaces: múltiples espacios   (11)    (0.5 puntos)\n"
+        //"history: trabajar con el historial de comandos f(12)    (0.5 puntos)\n"
+        //"ctrl+c: capturar y enviar señales a procesos (13) (0.5 puntos)\n"
+        "if:funcionalidad 15, 1punto"
+        "chain: concatenación de comandos con ; y operaciones booleanas (14) (0.5 puntos)\n"
+        "help: ayuda del shell (17) (1 punto)"
+
+        "Comandos built-in:\n"
+        "cd: cambia de directorios\n"
+        "exit: termina el shell\n"
+        //"history: muestra los 10 últimos comandos ejecutados\n"
+        //"again: se sutituye por un comando seleccionado dentro del historial\n"
+        "true: retorna 1\n"
+        "false: retorna 0\n"
+        "help: muestra esta ayuda\n\n"
+        //"Total: 6.0 puntos\n\n"
+        );
+}
+
+void help_basic()
+{
+    printf("\n Funcionalidad 1: Al comenzar cada iteraci'on de nuestra shell lo primero que se realiza en el m'etodo Shell"
+    "es imprimir `my-shell $` en la consola para luego con el getchar() leer del stdin de la misma.\n"
+	"Funcionalidad 2: Los comandos se ejecutan correctamente ya sean propios del sistema o pertenezcan"
+    "a nuestro build-in.\n" 
+    "Funcionalidad 3: El comando cd cambia el directorio ,empleando la función chdir, seg'un el path que recibe como argumento."
+
+//    "Funcionalidad 4: > >> <"
+//    "Funcionalidad 5: |"
+    "Funcionalidad 6: Luego de terminar la ejecuci'on de una l'inea de comandos se vuelve al m'etodo shell"
+    "donde se vuelve a imprimir `my-shell $` y se puede entrar otra l'inea de comando para ser ejecutada \n"
+    "Funcionalidad 7: Se separan los comandos con un espacio, mas al tambi'en estar implementada la funcionalidad"
+    "spaces, se puede dejar m'as de un espacio entre comandos y entre 0 y muchos con operadores especiales .\n"
+    "Funcionalidad 8: En nuestro parser, m'etodo ReadAndEjecuteLine() luego de encontrarnos mediante el getchar()"
+    "con el caracter #, terminamos de leer esta linea pero no guardamos nada de lo que se encuentre despu'es de #.\n\n");
 
 }
+
+
+void help_chain()
+{
+	printf("\n Los operadores &&, ||, ; concatenan comandos, en el caso del ; vamos leyendo cada linea, cuando"
+    " nos encontramos con uno de estos enviamos esta l'inea a ejecutarse y seguimos leyendo esta l'inea de la consola y "
+    "cuando finalice la mandamos a ejecutar aparte, a la hora de ejecutar una l'inea tomamos como caracteres de mayor"
+    "prioridad a && y ||  , luego buscamos los pipes (command1|command2) y luego buscamos los if then else y end, por 'ultimo resolvemos"
+    "las expresiones simples, del tipo command1 argumento < archivo. \n\n");
+}
+
+void help_spaces()
+{
+	printf("\n Entre comandos y argumentos puede haber cualquier cantidad de espacios >=1 \n. Ejemplo:\n"
+    "`com1 arg1` y `com1     arg1` \n y entre comandos y operadores puede haber igualmente cualquier cantidad "
+    "de espacios. \n Ejemplo: \n ");
+
+}
+
+void help_multipipe()
+{
+
+}    
+
+// void help_controlc()
+// {
+
+// }
+    
+
+
+int HELP_CODE(node* argument)
+{
+    Expression * next;
+    if(argument->next != NULL)
+        next = argument->next->value;
+    Expression * node_temp = argument->value;
+    //if(strcmp(node_temp->name,"")==0)
+    if(argument->next==NULL)
+    {
+        help_init();    return 0;
+
+    }
+    else if(strcmp("basic",next->name)==0)
+    {
+        help_basic();    return 0;
+
+    }
+    else if(strcmp("chain",next->name)==0)
+    {
+        help_chain();    return 0;
+
+    }
+    // else if(strcmp("history",argument)==0)
+    // {
+    //     help_history();
+    // }
+
+    else if(strcmp("spaces",next->name)==0)
+    {
+        help_spaces();    return 0;
+
+    }
+    else if(strcmp("multi-pipe",next->name)==0)
+    {
+        help_multipipe();    return 0;
+
+    }
+
+    // else if(strcmp("ctr+c",argument)==0)
+    // {
+    //     help_controlc();
+    // }
+    else
+    {
+         printf("invalid help command `%s'",next->name);
+         return 1;
+    }
+    return 0;
+
+}
+
+
+int CD_CODE(node* argument)
+{
+    Expression * node_temp;
+    if(argument->next!=NULL)node_temp = argument->next->value;
+    if (node_temp==NULL || node_temp->operators!=ARGS) 
+    {
+        chdir("/home");
+        return 1;
+    }
+    if (chdir(node_temp->name) == -1)   
+    {
+
+        printf("No se puede acceder a la direcci'on %s",node_temp->name);
+        return 1;
+    }
+    return 0;
+}
+
 bool did_ctrl_c=false;
 int pid;
 void CtrlC()
@@ -381,10 +531,10 @@ void CtrlC()
     }
 }
 
-void History()
-{
+// void History()
+// {
 
-}
+// }
 #pragma endregion
 
 
@@ -655,6 +805,8 @@ int (*testing[])(node*) = {
         SIMPLE_Expression_CODE,
         EXIT_CODE,
         SET_CODE,
+        HELP_CODE,
+        CD_CODE,
         // GET_CODE,
         // UNSET_CODE,
         0
@@ -1245,7 +1397,7 @@ void EjecuteLine(list* line)
 
     //node* current=exp_line->head;
 
-    printf("%s:%d \n",exp1->name,exp1->operators);
+  //  printf("%s:%d \n",exp1->name,exp1->operators);
 
 
     while(line->head!=NULL)
@@ -1265,7 +1417,7 @@ void EjecuteLine(list* line)
         //exp->operators=GetOperator(temp);
         int op=GetOperator(temp);
         //if(exp->operators==SIMPLE_EXPRESSION)
-        if(op==SIMPLE_EXPRESSION)
+        if(op==SIMPLE_EXPRESSION || PossibleArgumentExpression(op))////////lo que agregue esta solo aqui y en el metodo
         {
             //if(!command)exp->operators=ARGS;//Si no estamos esperando un comando entonces estamos en presencia de un argumento
             //if(archive)exp->operators=ARCHIVE;//Si la expresion anterior es un caracter especial de redireccion shora estamos en presencia de un archivo
@@ -1282,7 +1434,7 @@ void EjecuteLine(list* line)
         special_caracter_last=special_caracter_now;
         push_back(exp_line,GetStructExpression(name, op));
         //printf("%s:%d\n",exp->name,exp->operators);
-        printf("%s:%d\n",name,op);
+       // printf("%s:%d\n",name,op);
 
         free(pop_front(line));
     
@@ -1293,8 +1445,13 @@ void EjecuteLine(list* line)
     // if(_pid==0)
     // {
     Execute(exp_line->head,exp_line->tail);
-    // close(STDIN_FILENO);
-    // close(STDOUT_FILENO);
+
+
+    //char message[20];
+    //read(STDOUT_FILENO, message, 20);
+    //write(STDIN_FILENO, message, 20);
+    //printf("%s \n",message);
+
     // }
     // else if(_pid>0)
     // {
@@ -1467,8 +1624,6 @@ void Shell()
 
  while (1)
     {
-        printf("");
-        fflush(stdout);
         printf("\n my-shell $ ");
 
         char * word= (char*)calloc(sizeof(char),100);//word es cada una de las palabras que se mandan en un espacio de line
@@ -1492,7 +1647,7 @@ void Shell()
 
 int main(int argc, char const *argv[])
 {
-    signal(SIGINT,CtrlC);
+    //signal(SIGINT,CtrlC);
     Shell();
     return 0;
 }
