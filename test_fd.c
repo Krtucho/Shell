@@ -46,10 +46,10 @@ int out_append(char * file){
         return -1;
 
     // char a = getchar();
-    int dup = dup2(fd, STDIN_FILENO);
-    FILE * fp;
-    fp = freopen("a.txt","w", stdin);
-    fclose(fp);
+    int dup = dup2(fd, STDOUT_FILENO);
+    // FILE * fp;
+    // fp = freopen("a.txt","w", stdin);
+    // fclose(fp);
     // char string[80];
     // File * fp;
     // scanf(string);
@@ -65,10 +65,18 @@ int out_append(char * file){
 int main(int argc, char const *argv[])
 {
     
-    char * testing = strdup("d.txt");
+    char * testing = strdup("a.txt");
     int out = input_read(testing);
+    // out_overwrite(strdup("d.txt"));
 
-    printf("%d ABCDE", out);
+    char buf[1000];
+    int num = read(STDIN_FILENO, buf, sizeof(buf));
+    // printf("%d\n",num);
+    // printf("%d ABCDE", out);
+
+    out_append("d.txt");
+    printf("%s\n", strndup(buf,num));
+
 
     return 0;
 }
