@@ -39,7 +39,7 @@ int input_read(char * file){
     return 0;
 }
 
-int out_append(char * file, char buf[], int num){
+int out_append(char * file, char buf[1000], int num){
     int fd=open(file, O_WRONLY | O_APPEND | O_CREAT , 0);
 
     if(fd == -1)
@@ -49,17 +49,17 @@ int out_append(char * file, char buf[], int num){
         fd = STDOUT_FILENO;
 
     // char a = getchar();
-    int dup = dup2(fd, STDOUT_FILENO);
+    // int dup = dup2(fd, STDOUT_FILENO);
     // FILE * fp;
     // fp = freopen("a.txt","w", stdin);
     // fclose(fp);
     // char string[80];
     // File * fp;
     // scanf(string);
-    write(fd, &buf, num);
+    write(fd, buf, num);
     // fgets(string, 10, string);
-    if(dup == -1)
-        return -1;
+    // if(dup == -1)
+    //     return -1;
 
     close(fd);
     return 0;
@@ -77,7 +77,7 @@ int main(int argc, char const *argv[])
     // printf("%d\n",num);
     // printf("%d ABCDE", out);
     char * test = strdup("d.txt");
-    out_overwrite(test, buf, num);
+    out_append(test, buf, num);
     // printf("%s\n", strndup(buf,num));
 
 
