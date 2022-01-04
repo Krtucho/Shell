@@ -68,18 +68,27 @@ int out_append(char * file, char buf[1000], int num){
 int main(int argc, char const *argv[])
 {
     
-    char * testing = strdup("algo.txt");
-    int out = input_read(testing);
-    // out_overwrite(strdup("d.txt"));
+    // char * testing = strdup("algo.txt");
+    // int out = input_read(testing);
+    out_overwrite(strdup("g.txt"));
 
-    char buf[1000];
-    int num = read(STDIN_FILENO, buf, sizeof(buf));
+    // char buf[1000];
+    // int num = read(STDIN_FILENO, buf, sizeof(buf));
     // printf("%d\n",num);
     // printf("%d ABCDE", out);
-    char * test = strdup("d.txt");
-    out_append(test, buf, num);
+    // char * test = strdup("d.txt");
+    // out_append(test, buf, num);
     // printf("%s\n", strndup(buf,num));
 
+    // fflush(stdin);
+    // fflush(stdout);
+
+    // dup2(STDOUT_FILENO, STDIN_FILENO);
+    printf("Algo que tiene q escribirse");
+
+    // char c = getchar();
+
+    // printf("%c", c);
 
     return 0;
 }

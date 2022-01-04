@@ -7,6 +7,7 @@
 #include <sys/wait.h>
 #include<sys/stat.h>
 //#include<stdbool.h>// Booleanos
+#include <fcntl.h>
 //#include <stdio.h>
 //#include <stdlib.h>
 //#include <string.h>
@@ -89,7 +90,7 @@ void push_front(list* l, void* v)
     insert->previous = NULL;
     l->head->previous = insert;
     l->head = insert;
-    l->size++; 
+    l->size++;
 }
 node* pop_back(list* l)
 {
@@ -117,30 +118,30 @@ node* pop_front(list* l)
 }
 node* getAt(list* l, int ind)
 {
-    if(ind<0 || ind>=l->size) 
+    if(ind<0 || ind>=l->size)
     {
-        printf("Index out of range."); 
+        printf("Index out of range.");
         exit(1);
     }
     node* current = l->head;
     for (size_t i = 0; i < ind; i++, current = current->next);
-    return current;   
+    return current;
 }
 void insert(list* l, void* v, int ind)
 {
-    if(ind<0 || ind>=l->size) 
+    if(ind<0 || ind>=l->size)
     {
-        printf("Index out of range."); 
+        printf("Index out of range.");
         return;
     }
-    if(ind==0) 
+    if(ind==0)
     {
-        push_front(l, v); 
+        push_front(l, v);
         return;
     }
     if(ind==l->size-1)
     {
-        push_back(l,v); 
+        push_back(l,v);
         return;
     }
     node* insert = __ReservedMemoryforNode
@@ -167,10 +168,10 @@ void removeNode(list* l, node* item)
     else
     {
         node* prev = item->previous;
-        node* next = item->next; 
+        node* next = item->next;
         prev->next = next;
         next->previous = prev;
-        l->size--;   
+        l->size--;
     }
 }
 
@@ -190,7 +191,7 @@ void free_list(list* l)
     free(l);
 }
 
-void print_list(list * t) 
+void print_list(list * t)
 {
     node * current = t->head;
     printf("Imprimiendo lista...\n");
@@ -231,7 +232,7 @@ enum OPERATORS{
     REDIRLESS=30,
     ARCHIVE=31,
     DOUBLEREDIRBIG=32
-    
+
 }OPERATORS;
 
 
@@ -292,7 +293,7 @@ char GetOneChar(char* strline,bool history)
 void EndReadLine(char* strline,bool history)
 {
     char c;//=GetOneChar();
-    while(c!= '\n')    
+    while(c!= '\n')
     {
         c=GetOneChar(strline,history);
     }
@@ -337,10 +338,10 @@ int SpecialCaracters(char* c)//devuelve si es un caracter especial en general
     if(strcmp(c,">>")==0)return 1;
     // if(c=="|")return 1;
     // if(c=="<")return 1;
-    // if(c==">")return 1; 
+    // if(c==">")return 1;
     // if(c=="&&")return 1;
     // if(c=="||")return 1;
-    // if(c==">>")return 1; 
+    // if(c==">>")return 1;
     return 0;
 }
 
@@ -362,7 +363,7 @@ bool PossibleArgumentExpression(int op)
     if(op == TRUE || op == FALSE || op == EXIT || op == CD || op == HISTORY || op == HELP || op == GET || op == UNSET || op == SET)
     {
         return true;
-    }    
+    }
     return false;
 }
 
@@ -403,7 +404,7 @@ void help_basic()
     printf("\n Funcionalidad 1: Al comenzar cada iteraci'on de nuestra shell lo primero que se realiza en el m'etodo Shell"
     "es imprimir `my-shell $` en la consola para luego con el getchar() leer del stdin de la misma.\n"
 	"Funcionalidad 2: Los comandos se ejecutan correctamente ya sean propios del sistema o pertenezcan"
-    "a nuestro build-in.\n" 
+    "a nuestro build-in.\n"
     "Funcionalidad 3: El comando cd cambia el directorio ,empleando la función chdir, seg'un el path que recibe como argumento."
 
 //    "Funcionalidad 4: > >> <"
@@ -438,13 +439,13 @@ void help_spaces()
 void help_multipipe()
 {
 
-}    
+}
 
 void help_controlc()
 {
     printf("\n  \n ");
 }
-    
+
 
 
 int HELP_CODE(node* argument)
@@ -503,13 +504,13 @@ int CD_CODE(node* argument)
 {
     Expression * node_temp;
     if(argument->next!=NULL)node_temp = argument->next->value;
-    if (node_temp==NULL || node_temp->operators!=ARGS) 
+    if (node_temp==NULL || node_temp->operators!=ARGS)
     {
         chdir("/home");
         return 1;
     }
     int chdir_result=chdir(node_temp->name);
-    if ( chdir_result == -1)   
+    if ( chdir_result == -1)
     {
 
         printf("No se puede acceder a la direcci'on %s",node_temp->name);
@@ -550,13 +551,57 @@ int HISTORY_CODE(node* argument)
 
 
 #pragma region Ejecucion
+int only_write(char * file){
+    int fd = open(file, O_WRONLY | O_CREAT);
+
+    if(fd == -1)
+        return -1;
+
+    if(file == NULL)
+        fd = STDOUT_FILENO;
+
+    int tempdup = dup2(fd, STDOUT_FILENO);
+    if(tempdup == -1)
+        return -1;
+
+    close(fd);
+    return 0;
+}
+int only_append(char * file, char buf[1000], int num){
+
+    int fd=open(file, O_WRONLY | O_APPEND | O_CREAT , 0);
+
+    if(fd == -1)
+        return -1;
+
+    if(file == NULL)
+        fd = STDOUT_FILENO;
+
+    write(fd, buf, num);
+
+    close(fd);
+    return 0;
+}
+int input_read(char * file){
+    int fd = open(file, O_RDONLY | O_CREAT);
+
+    if(fd==-1)
+        return -1;
+
+    int tempdup = dup2(fd, STDIN_FILENO);
+    if(tempdup == -1)
+        return -1;
+
+    close(fd);
+    return 0;
+}
 
 void Run(node * com){
     // printf("Inside Run Method...\n");
     Expression * com_to_exec = com->value;
     if(com_to_exec->operators != SIMPLE_EXPRESSION)
         return;
-        
+
     // list * temp_args = init_list(com->next);
 
     node * last = com->next;
@@ -592,14 +637,14 @@ void Run(node * com){
         current=current->next;
     }
 
-    FILE * fp;
-    FILE * fp_out;
+    //FILE * fp;
+    //FILE * fp_out;
     pid_t rc = fork();
     pid=rc;
     did_ctrl_c=false;
 
     // char * buf;
-    
+
     if (rc < 0) { // fork failed; exit
         fprintf(stderr, "fork failed\n");
         exit(1);
@@ -616,14 +661,16 @@ void Run(node * com){
                     if(com_prev->operators == EXIT && com_to_exec->std_in==NULL){
                         com_to_exec->std_in=strdup(com_prev->name);
                         //FILE * fp;
-                        fp = freopen(com_to_exec->std_in,"w", stdin);
-                        fclose(fp);
+                        input_read(com_to_exec->std_in);
+
+                        //fp = freopen(com_to_exec->std_in,"w", stdin);
+                        //fclose(fp);
 
 
-                        fp = freopen(com_to_exec->std_in,"r", stdin);
+                        //fp = freopen(com_to_exec->std_in,"r", stdin);
 
                         int e = execvp(myargs[0], myargs);
-                        fclose(fp);
+                        //fclose(fp);
                     }
                 }
             }
@@ -631,32 +678,34 @@ void Run(node * com){
 
 
         //FILE * fp;
-        
+
         if(com_to_exec->std_in != NULL){
             // printf("com_to_exec->std_in != NULL..\n");
+            input_read(com_to_exec->std_in);
 
-            fp = freopen(com_to_exec->std_in,"r", stdin);
+            //fp = freopen(com_to_exec->std_in,"r", stdin);
         }
-        
+
         // int num = read(STDOUT_FILENO, buf, sizeof(buf));
         // printf("%d\n",num);
         // printf("%s", buf);
 
         if(com != NULL && com->next != NULL){
-            
+
             node * current = com;
             Expression * exp;
-            
+
             while(current != NULL){
                 exp = current->value;
                 if(exp->operators == REDIRBIG || exp->operators == DOUBLEREDIRBIG){
-                    fp_out = freopen("temp", "w", stdout);
+                    only_write("temp");
+                    //fp_out = freopen("temp", "w", stdout);
                     break;
                 }
                 current = current->next;
             }
         }
-        
+
         int e = execvp(myargs[0], myargs);
 
         //int e = execvp(myargs[0], myargs);
@@ -673,7 +722,7 @@ void Run(node * com){
         // read(STDOUT_FILENO, message, 20);
         // printf("Buff: %s\n", buf);
 
-        
+
         pid_t p=waitpid(rc,status,0);
         //exit(1);
         //kill(rc, SIGKILL);
@@ -684,12 +733,12 @@ void Run(node * com){
         // fclose(stdin);
         // fclose(stdout);
 
-        if(com_to_exec->std_in != NULL){
-            if(fp != NULL)
-                fclose(fp);
-        }
-        if(fp_out != NULL)
-            fclose(fp_out);
+        // if(com_to_exec->std_in != NULL){
+        //     if(fp != NULL)
+        //         fclose(fp);
+        // }
+        // if(fp_out != NULL)
+        //     fclose(fp_out);
 
 
         kill(rc, SIGKILL);
@@ -699,10 +748,10 @@ void Run(node * com){
     // close();
     // kill(rc, SIGKILL);
     // exit(1);
-   
+
     // printf("%d", e);
     // fclose(stdin);
-    // fclose(stdout); 
+    // fclose(stdout);
 }
 
 void handler(int sig, pid_t pid){
@@ -748,7 +797,7 @@ int EXIT_CODE(node* exp){
         //     fclose(stdin);
 
         // }
-        
+
         //FILE * fp;
         //     // printf("Inside pipe was True...\n");
         // printf("%d",0);
@@ -772,7 +821,7 @@ int EXIT_CODE(node* exp){
             // fclose(stdout);
         //     kill(rc, SIGKILL);
         // }
-        //     // write(STDOUT_FILENO, 0, 1); 
+        //     // write(STDOUT_FILENO, 0, 1);
         //Expression * current=exp->value;
         //fp = freopen(current->name, "w", stdout);
         //fclose(fp);
@@ -818,7 +867,7 @@ int (*testing[])(node*) = {
         SIMPLE_Expression_CODE,
         EXIT_CODE,
         HISTORY_CODE,
-        HELP_CODE,        
+        HELP_CODE,
         CD_CODE,
         SET_CODE,
         // GET_CODE,
@@ -942,7 +991,7 @@ int SolveExpressions(node * first_cmd, node * last_cmd){
 int SolveBiggerRedir(node * first_cmd, node * last_cmd, int exp_out){
     Expression * output = NULL;
     node * current=first_cmd;
-    FILE *fp;
+    //FILE *fp;
     bool redir_found = false;
 
     Expression * current_exp;
@@ -952,8 +1001,11 @@ int SolveBiggerRedir(node * first_cmd, node * last_cmd, int exp_out){
         if(current_exp->operators==REDIRBIG)
         {
             Expression *current_next=current->next->value;
-            fp = freopen(current_next->name, "w", stdout);
-            fclose(fp);
+            int fd = open(current_next->name, O_WRONLY | O_CREAT);
+            close(fd);
+
+            // FILE * fp = freopen(current_next->name, "w", stdout);
+            // fclose(fp);
             output=current_next;
 
             // continue;
@@ -962,8 +1014,12 @@ int SolveBiggerRedir(node * first_cmd, node * last_cmd, int exp_out){
         else if(current_exp->operators==DOUBLEREDIRBIG)
         {
             Expression *current_next=current->next->value;
-            fp = freopen(current_next->name, "a", stdout);
-            fclose(fp);
+            int fd=open(current_next->name, O_WRONLY | O_APPEND | O_CREAT , 0);
+            close(fd);
+
+            // FILE * fp = freopen(current_next->name, "a", stdout);
+            // fclose(fp);
+
             output=current_next;
             // continue;
 
@@ -973,25 +1029,31 @@ int SolveBiggerRedir(node * first_cmd, node * last_cmd, int exp_out){
     if(output!=NULL){
         Expression * exp=first_cmd->value;
 
-        FILE * fp_in=fopen("temp","r");
-        struct stat sb;
+       // FILE * fp_in=fopen("temp","r");
+        //struct stat sb;
+        input_read("temp");
 
-        char * file_contents=malloc(sb.st_size);
 
-        fread(file_contents,sb.st_size,1,fp_in);
+        char file_contents[1000];
+        int num=read(STDIN_FILENO,file_contents,sizeof(file_contents));
+
+        //fread(file_contents,sb.st_size,1,fp_in);
 
         exp->std_out=strdup(file_contents);
         // printf("%s", file_contents);
-        fclose(fp_in);
+        //fclose(fp_in);
 
-        if(remove("temp")){}
+       // if(remove("temp")){}
 
-        FILE * fp_out = freopen(output->name,"a",stdout);
-        printf("%s \n", exp->std_out);
-        fclose(fp_out);
+        char * test = strdup(output->name);
+        only_append(test, file_contents, num);
 
-        fflush(stdout);
-        fflush(stdin);
+        //FILE * fp_out = freopen(output->name,"a",stdout);
+        //printf("%s \n", exp->std_out);
+        //fclose(fp_out);
+
+        //fflush(stdout);
+        //fflush(stdin);
         // close(STDIN_FILENO);
         // close(STDOUT_FILENO);
         // exp->std_out="1";
@@ -1005,7 +1067,7 @@ int SolveBiggerRedir(node * first_cmd, node * last_cmd, int exp_out){
     // {
     //     /* code */
     // }
-    
+
 
 
     // node * current;
@@ -1025,14 +1087,14 @@ int SolveBiggerRedir(node * first_cmd, node * last_cmd, int exp_out){
     //       current_temp->operators==REDIRLESS || // <
     //       (current_temp->operators==ARCHIVE && //  < archivo o....... > archivo
     //        (prev_temp->operators==REDIRLESS || prev_temp->operators==REDIRBIG)
-    //       )|| // < comando o ............. > comando 
+    //       )|| // < comando o ............. > comando
     //       (current_temp->operators==SIMPLE_EXPRESSION && //  < comando o....... > comando
     //        (prev_temp->operators==REDIRLESS || prev_temp->operators==REDIRBIG)
     //       )
     //       ){
     //     // Expression * prev_temp = current->previous->value;
     //     // Expression * current_temp = current->value;
-    //     // current->previous->value 
+    //     // current->previous->value
     //     prev_temp->std_in = current_temp->std_out;
     //     current = current->previous;
 
@@ -1061,6 +1123,7 @@ node * SearchBiggerRedir(node * last_cmd){
     return NULL;
 }
 
+
 node * SolveLessRedir(node * first_cmd, node * last_cmd){
     node * current = last_cmd;
     node * input=NULL;
@@ -1083,7 +1146,7 @@ node * SolveLessRedir(node * first_cmd, node * last_cmd){
     //     printf("%s\n", current_exp->name);
     // else
     //     printf("current_exp = NULL");
-    
+
     if(input!=NULL)
     {
         // printf("Input was not equal NULL...\n");
@@ -1142,7 +1205,7 @@ int Execute(node * first_cmd, node * last_cmd){
             if(output ==0)
             { // Si && retorna true devuelve el codigo a la derecha
                 // fclose(stdin);
-                // fclose(stdout); 
+                // fclose(stdout);
                 //close(STDOUT_FILENO);
                 //close(STD_FILENO);
                 return Execute (AND_OR->next, last_cmd);
@@ -1160,14 +1223,14 @@ int Execute(node * first_cmd, node * last_cmd){
         // free(AND_OR);
         // free(AND_OR_com);
     }
-    
+
     // printf("Start searching Pipes...\n");
     // Pipes
     node * PIPE_node = Search_PIPE(first_cmd, last_cmd);
     // printf("Out of found PIPE method...\n");
     Expression * PIPE_node_com;
     //if(PIPE_node != NULL)
-        
+
 
     if(PIPE_node!= NULL){ // 3 casos
         PIPE_node_com = PIPE_node->value;
@@ -1196,7 +1259,7 @@ int Execute(node * first_cmd, node * last_cmd){
 
         //     }
         //     wait(NULL);
-            
+
         int fd[2];
         pid_t pidC;
         int *status=0;
@@ -1249,7 +1312,7 @@ int Execute(node * first_cmd, node * last_cmd){
             //}
            //wait(status);
 
-           
+
         //    pid_t p1=waitpid(pidC,status,0);
         //     kill(pidC, SIGKILL);
             int child_pid = waitpid(-1, status, WNOHANG);
@@ -1257,8 +1320,8 @@ int Execute(node * first_cmd, node * last_cmd){
             // execvp(myargsaaa[0], myargsaaa);
             // break;
         }
-        
-        
+
+
         // wait(status);
 
             // free(fd);
@@ -1288,11 +1351,11 @@ int Execute(node * first_cmd, node * last_cmd){
 
         // if(first_cmd_next_com->operators == ARGS){ // Caso en q sea una hoja a la derecha
 
-            
+
         //     node * pipe_left = Solve_Leaves(first_cmd, PIPE_node->previous);
         //     Expression* pipe_left_com = pipe_left->value;
         //     PIPE_node_com->std_in = pipe_left_com->std_out;
-        //     //node * pipe_right = 
+        //     //node * pipe_right =
         //     SolveBiggerRedir(PIPE_node->next, last_cmd);
         //     output = Execute(PIPE_node->next, last_cmd);
         // }
@@ -1321,11 +1384,11 @@ int Execute(node * first_cmd, node * last_cmd){
         // free(output);
     }
 
-    
+
     // printf("Starting If Else part...\n");
     // If Else
     // Si se llego hasta aca fue debido a que no se encontraron ni PIPES, ni || o && en la lista de Comandos que tenemos desde el inicio hasta este punto
-    // Luego tomamos el If que nos queda y ejecutamos el codigo de la siguiente forma: Buscamos hasta que encontremos un Then, ejecutamos el If y luego dependiendo 
+    // Luego tomamos el If que nos queda y ejecutamos el codigo de la siguiente forma: Buscamos hasta que encontremos un Then, ejecutamos el If y luego dependiendo
     // de la salida ejecutamos el Then o el Else llegando asi a encontrar un End
     // ***If Else***
     // En caso de existir un If Else, ejecutamos hasta el codigo donde comienza el If else o Then y verificamos, si es If Else evaluamos el codigo y de ser True entramos al Then,
@@ -1333,13 +1396,13 @@ int Execute(node * first_cmd, node * last_cmd){
     node * IF_ELSE_node = Search_IF_THEN_ELSE(first_cmd, last_cmd, IF);
     if(IF_ELSE_node != NULL){ // 2 casos
         //Buscando para IF_ELSE o simplemente THEN
-        
+
         node * THEN_node = Search_IF_THEN_ELSE(IF_ELSE_node, last_cmd, THEN);
         node * END_node = Search_IF_THEN_ELSE(THEN_node, last_cmd, END);
         node * ELSE_node = Search_IF_THEN_ELSE(THEN_node, last_cmd, ELSE);
 
         //Caso 1 para IF ELSE
-        int IF_output = Execute(IF_ELSE_node->next, THEN_node->previous); // Aca se supone que se modifique la variable first_cmd, para que luego apunte hacia la instruccion siguiente al 
+        int IF_output = Execute(IF_ELSE_node->next, THEN_node->previous); // Aca se supone que se modifique la variable first_cmd, para que luego apunte hacia la instruccion siguiente al
         if(IF_output==0){ // Si devuelve True es xq tiene q ir hacia el THEN
             // Ejecuta el Then
             return Execute(THEN_node->next, ELSE_node->previous);
@@ -1356,7 +1419,7 @@ int Execute(node * first_cmd, node * last_cmd){
         //Caso 2: Buscando para IF THEN ELSE
         // while (IF_ELSE_node == IF_ELSE)
         // {
-        //     node * THEN = 
+        //     node * THEN =
         // }
         // free(THEN_node);
         // free(END_node);
@@ -1379,16 +1442,16 @@ int Execute(node * first_cmd, node * last_cmd){
 
 void EjecuteLine(list* line)
 {
-    
+
     bool command=true;//indica si en este momento debo recibir un comando
     bool archive=false;//indica si en este momento debo recibir un archivo
     bool special_caracter_last=false;//indica si la palabra anterior fue un caracter especial
     bool if_caracter_last=false;//indica si la expresion anterior es de tipo if, else then o end
-    
+
     Expression * exp1 = (Expression*)malloc(sizeof(Expression));//para guardar la primera expresion
-       
+
     char* temp = pop_front(line)->value; //guarda temporalmente el primer valor de la lista de string
-    
+
     if(SpecialCaracters(temp)&& !RedirCaracter(temp))////cuando como primera palabra tenemos un caracter especial que no puede ocupar ese lugar
     {
         printf("syntax error near unexpected token `%s'",temp);
@@ -1441,7 +1504,7 @@ void EjecuteLine(list* line)
             if(archive)op=ARCHIVE;//Si la expresion anterior es un caracter especial de redireccion shora estamos en presencia de un archivo
 
 
-        }    
+        }
         if_caracter_last=IfCommand(temp);
         command=false;
         archive=false;
@@ -1453,13 +1516,14 @@ void EjecuteLine(list* line)
        // printf("%s:%d\n",name,op);
 
         free(pop_front(line));
-    
+
     }
 
     ////Descomentar esto desde aqui
     // int _pid =fork();
     // if(_pid==0)
     // {
+    
     Execute(exp_line->head,exp_line->tail);
 
 
@@ -1495,7 +1559,7 @@ void ReadAndEjecuteLine(list* line,char* word, char c)//crea una lista de string
 
     while(c!= '\n' && c!= EOF)
         {
-         
+
             if(c=='#')
             {
                 EndReadLine(strline,history);
@@ -1509,7 +1573,7 @@ void ReadAndEjecuteLine(list* line,char* word, char c)//crea una lista de string
             // // // //         push_back(line, strdup(word));
             // // // //         strcpy(word,"");
             // // // //     }
-            // // // //     ConcatChar(c,word);                    
+            // // // //     ConcatChar(c,word);
             // // // //     c=GetOneChar(strline,history);
 
 
@@ -1544,7 +1608,7 @@ void ReadAndEjecuteLine(list* line,char* word, char c)//crea una lista de string
                 strcpy(word,"");
                 pop_front(line);
                 EjecuteLine(line);
-                //print_list(line);                
+                //print_list(line);
                 //pop_back(line);
                 free_list(line);
                 line=init_list("init");
@@ -1553,11 +1617,11 @@ void ReadAndEjecuteLine(list* line,char* word, char c)//crea una lista de string
                 //c=GetOneChar();
                 continue;
             }
-            
+
             if(SpecialCaracter(c))
-            {            
-                if(word[0]=='\0' ||SpecialCaracter(word[0]) )//Si la palabra que tengo hasta el 
-                //momento es vacia es porque se dejo un espacio y tengo que crear una nueva 
+            {
+                if(word[0]=='\0' ||SpecialCaracter(word[0]) )//Si la palabra que tengo hasta el
+                //momento es vacia es porque se dejo un espacio y tengo que crear una nueva
                 //para el caracter especial o en el caso que se este conforrmando un caracter especial,
                 //lo termino de conformar.
                 {
@@ -1574,15 +1638,15 @@ void ReadAndEjecuteLine(list* line,char* word, char c)//crea una lista de string
                     c=GetOneChar(strline,history);
                     continue;
                 }
-                
+
                    push_back(line, strdup(word));
                    strcpy(word,"");
                    ConcatChar(c,word);
-                   
+
                    c=GetOneChar(strline,history);
                    //c=GetOneChar();
-                   continue;      
-                
+                   continue;
+
             }
 
             if(SpecialCaracters(word))///Si es un caracter normal pero esta pegado a un caracter especial anterior
@@ -1594,9 +1658,9 @@ void ReadAndEjecuteLine(list* line,char* word, char c)//crea una lista de string
                 c=GetOneChar(strline,history);
                 //c=GetOneChar();
                 continue;
-                
+
             }
-            
+
             if(c==' ')
             {
                 if(word[0]=='\0')
@@ -1604,7 +1668,7 @@ void ReadAndEjecuteLine(list* line,char* word, char c)//crea una lista de string
                     c=GetOneChar(strline,history);
                     //c=GetOneChar();
                     continue;
-                    
+
                 }
                 push_back(line, strdup(word));
 
@@ -1613,7 +1677,7 @@ void ReadAndEjecuteLine(list* line,char* word, char c)//crea una lista de string
                 //c=GetOneChar();
                 continue;
             }
-            
+
             //if(concat)
             ConcatChar(c,word);
             c=GetOneChar(strline,history);
@@ -1635,24 +1699,59 @@ void ReadAndEjecuteLine(list* line,char* word, char c)//crea una lista de string
     //printf("\n HISTORY: %s \n",strline);
 }
 
+void fflush_stdin() {
+    char c;
+    while((c = getchar()) != '\n' && c != EOF){}
+}
+
 void Shell()
 {
 
  while (1)
     {
-        printf("\n my-shell $ ");
+        // int b = EOF;
+        // printf("%d", b);
+        
+        int std_in=dup(STDIN_FILENO);
+        int std_out=dup(STDOUT_FILENO);
 
         char * word= (char*)calloc(sizeof(char),100);//word es cada una de las palabras que se mandan en un espacio de line
-        strcpy(word,""); 
+        strcpy(word,"");
 
         list* line=init_list("init"); //line es la linked list que guarda los comandos argumentos y caracteres especiales
         //pop_front(line);
 
-        char c=getchar();  //cada uno de los char a leer de consola   
+        // wait(NULL);
+        printf("\n my-shell $ ");
+        // fflush(stdin);
         
+
+        char c;
+        c = getchar();  //cada uno de los char a leer de consola
         //bool concat=true;
+        // wait(NULL);
+
 
         ReadAndEjecuteLine(line,word,c);
+
+        // fflush(stdout);
+
+        dup2(std_in,STDIN_FILENO);
+        dup2(std_out,STDOUT_FILENO);
+        close(std_in);
+        close(std_out);
+        // close(STDIN_FILENO);
+        // dup2(STDIN_FILENO, STDIN_FILENO);
+        // char message[20];
+        // read(STDIN_FILENO, message, 20);
+        // printf("Buff: %s\n", message);
+        // char cadena[20];
+        // int a = scanf("%s", &cadena);
+
+        // printf("%d", a);
+        
+        // fflush_stdin();
+
         //EndReadLine("",false);
 
     }
