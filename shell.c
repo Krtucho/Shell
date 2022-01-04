@@ -266,7 +266,7 @@ void ConcatChar(char c, char *chain)
 
 int GetIndexOF(char* word)
 {
-    for (int i = 0; i < 19/*sizeof(special_strings)*/; i++)
+    for (int i = 0; i < 20/*sizeof(special_strings)*/; i++)
     {
         if(strcmp(special_strings[i],word)==0)return i;
     }
@@ -991,7 +991,7 @@ int SolveExpressions(node * first_cmd, node * last_cmd){
 int SolveBiggerRedir(node * first_cmd, node * last_cmd, int exp_out){
     Expression * output = NULL;
     node * current=first_cmd;
-    //FILE *fp;
+    FILE * fp;
     bool redir_found = false;
 
     Expression * current_exp;
@@ -1001,11 +1001,14 @@ int SolveBiggerRedir(node * first_cmd, node * last_cmd, int exp_out){
         if(current_exp->operators==REDIRBIG)
         {
             Expression *current_next=current->next->value;
-            int fd = open(current_next->name, O_WRONLY | O_CREAT);
-            close(fd);
+            // int fd = open(current_next->name, O_WRONLY | O_CREAT);
+            // close(fd);
 
-            // FILE * fp = freopen(current_next->name, "w", stdout);
+            // fp = freopen(current_next->name, "w", stdout);
             // fclose(fp);
+
+            fp=fopen(current_next->name,"w");
+            fclose(fp);
             output=current_next;
 
             // continue;
@@ -1014,11 +1017,14 @@ int SolveBiggerRedir(node * first_cmd, node * last_cmd, int exp_out){
         else if(current_exp->operators==DOUBLEREDIRBIG)
         {
             Expression *current_next=current->next->value;
-            int fd=open(current_next->name, O_WRONLY | O_APPEND | O_CREAT , 0);
-            close(fd);
+            // int fd=open(current_next->name, O_WRONLY | O_APPEND | O_CREAT , 0);
+            // close(fd);
 
-            // FILE * fp = freopen(current_next->name, "a", stdout);
+            // fp = freopen(current_next->name, "a", stdout);
             // fclose(fp);
+
+            fp=fopen(current_next->name,"a");
+            fclose(fp);
 
             output=current_next;
             // continue;
@@ -1043,7 +1049,7 @@ int SolveBiggerRedir(node * first_cmd, node * last_cmd, int exp_out){
         // printf("%s", file_contents);
         //fclose(fp_in);
 
-       // if(remove("temp")){}
+       if(remove("temp")){}
 
         char * test = strdup(output->name);
         only_append(test, file_contents, num);
@@ -1728,7 +1734,7 @@ void Shell()
 
         char c;
         c = getchar();  //cada uno de los char a leer de consola
-        //bool concat=true;
+        // bool concat=true;
         // wait(NULL);
 
 
