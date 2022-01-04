@@ -120,7 +120,7 @@ node* getAt(list* l, int ind)
 {
     if(ind<0 || ind>=l->size)
     {
-        printf("Index out of range.");
+        printf("Index out of range.\n");
         exit(1);
     }
     node* current = l->head;
@@ -131,7 +131,7 @@ void insert(list* l, void* v, int ind)
 {
     if(ind<0 || ind>=l->size)
     {
-        printf("Index out of range.");
+        printf("Index out of range.\n");
         return;
     }
     if(ind==0)
@@ -492,7 +492,7 @@ int HELP_CODE(node* argument)
     }
     else
     {
-         printf("invalid help command `%s'",next->name);
+         printf("invalid help command `%s'\n",next->name);
          return 1;
     }
     return 0;
@@ -512,8 +512,8 @@ int CD_CODE(node* argument)
     int chdir_result=chdir(node_temp->name);
     if ( chdir_result == -1)
     {
-
-        printf("No se puede acceder a la direcci'on %s",node_temp->name);
+         printf("bash: cd: %s: No such file or directory\n",node_temp->name);
+     //   printf("No se puede acceder a la direcci'on %s",node_temp->name);
         return 1;
     }
     return 0;
@@ -1460,7 +1460,7 @@ void EjecuteLine(list* line)
 
     if(SpecialCaracters(temp)&& !RedirCaracter(temp))////cuando como primera palabra tenemos un caracter especial que no puede ocupar ese lugar
     {
-        printf("syntax error near unexpected token `%s'",temp);
+        printf("syntax error near unexpected token `%s'\n",temp);
         return;
     }
 
@@ -1495,8 +1495,8 @@ void EjecuteLine(list* line)
         //Expression * exp = (Expression*)malloc(sizeof(Expression));//para crear cada expresion de la lista de expresiones
         char* name=strdup(temp);
         bool special_caracter_now=SpecialCaracters(temp);//la expresion actual es un caracter especial
-        if(special_caracter_last && special_caracter_now){printf("syntax error near unexpected token `%s'",temp); return;}
-        if(if_caracter_last && special_caracter_now && !RedirCaracter(temp)){printf("syntax error near unexpected token `%s'",temp); return;}
+        if(special_caracter_last && special_caracter_now){printf("syntax error near unexpected token `%s'\n",temp); return;}
+        if(if_caracter_last && special_caracter_now && !RedirCaracter(temp)){printf("syntax error near unexpected token `%s'\n",temp); return;}
         if(special_caracter_last || if_caracter_last)command=true;
 
         //exp->operators=GetOperator(temp);
@@ -1605,23 +1605,24 @@ void ReadAndEjecuteLine(list* line,char* word, char c)//crea una lista de string
             if(c==';')
             {
                 ////////Primero terminar de armar la linea actual, y mandarla a ejecutar
-                if(strcmp(word,"")==0||strcmp(line->head->value,"init")==0)
+                if(strcmp(word,"")==0 && line->head->next==NULL)
                 {
-                    printf("syntax error near unexpected token `;'");
+                    printf("syntax error near unexpected token `;'\n");
                     return;
                 }
-                push_back(line, strdup(word));
-                strcpy(word,"");
-                pop_front(line);
-                EjecuteLine(line);
+                //push_back(line, strdup(word));
+                //strcpy(word,"");
+                //pop_front(line);
+                //EjecuteLine(line);
                 //print_list(line);
                 //pop_back(line);
-                free_list(line);
-                line=init_list("init");
+                //free_list(line);
+                //line=init_list("init");
 
-                c=GetOneChar(strline,history);
+                //c=GetOneChar(strline,history);
                 //c=GetOneChar();
-                continue;
+                //continue;
+                break;
             }
 
             if(SpecialCaracter(c))
@@ -1713,6 +1714,7 @@ void fflush_stdin() {
 void Shell()
 {
 
+printf("\n");
  while (1)
     {
         // int b = EOF;
@@ -1728,7 +1730,7 @@ void Shell()
         //pop_front(line);
 
         // wait(NULL);
-        printf("\n my-shell $ ");
+        printf("my-shell $ ");
         // fflush(stdin);
         
 
@@ -1779,3 +1781,5 @@ int main(int argc, char const *argv[])
     Shell();
     return 0;
 }
+
+
