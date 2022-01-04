@@ -120,7 +120,7 @@ node* getAt(list* l, int ind)
 {
     if(ind<0 || ind>=l->size)
     {
-        printf("Index out of range.");
+        printf("Index out of range.\n");
         exit(1);
     }
     node* current = l->head;
@@ -131,7 +131,7 @@ void insert(list* l, void* v, int ind)
 {
     if(ind<0 || ind>=l->size)
     {
-        printf("Index out of range.");
+        printf("Index out of range.\n");
         return;
     }
     if(ind==0)
@@ -266,7 +266,7 @@ void ConcatChar(char c, char *chain)
 
 int GetIndexOF(char* word)
 {
-    for (int i = 0; i < 19/*sizeof(special_strings)*/; i++)
+    for (int i = 0; i < 20/*sizeof(special_strings)*/; i++)
     {
         if(strcmp(special_strings[i],word)==0)return i;
     }
@@ -492,7 +492,7 @@ int HELP_CODE(node* argument)
     }
     else
     {
-         printf("invalid help command `%s'",next->name);
+         printf("invalid help command `%s'\n",next->name);
          return 1;
     }
     return 0;
@@ -512,8 +512,8 @@ int CD_CODE(node* argument)
     int chdir_result=chdir(node_temp->name);
     if ( chdir_result == -1)
     {
-        printf("bash: cd: %s: No such file or directory \n",node_temp->name);
-        //printf("No se puede acceder a la direcci'on %s \n",node_temp->name);
+         printf("bash: cd: %s: No such file or directory\n",node_temp->name);
+     //   printf("No se puede acceder a la direcci'on %s",node_temp->name);
         return 1;
     }
     return 0;
@@ -991,7 +991,7 @@ int SolveExpressions(node * first_cmd, node * last_cmd){
 int SolveBiggerRedir(node * first_cmd, node * last_cmd, int exp_out){
     Expression * output = NULL;
     node * current=first_cmd;
-    //FILE *fp;
+    FILE * fp;
     bool redir_found = false;
 
     Expression * current_exp;
@@ -1001,11 +1001,14 @@ int SolveBiggerRedir(node * first_cmd, node * last_cmd, int exp_out){
         if(current_exp->operators==REDIRBIG)
         {
             Expression *current_next=current->next->value;
-            int fd = open(current_next->name, O_WRONLY | O_CREAT);
-            close(fd);
+            // int fd = open(current_next->name, O_WRONLY | O_CREAT);
+            // close(fd);
 
             // fp = freopen(current_next->name, "w", stdout);
             // fclose(fp);
+
+            fp=fopen(current_next->name,"w");
+            fclose(fp);
             output=current_next;
 
             // continue;
@@ -1014,11 +1017,14 @@ int SolveBiggerRedir(node * first_cmd, node * last_cmd, int exp_out){
         else if(current_exp->operators==DOUBLEREDIRBIG)
         {
             Expression *current_next=current->next->value;
-            int fd=open(current_next->name, O_WRONLY | O_APPEND | O_CREAT , 0);
-            close(fd);
+            // int fd=open(current_next->name, O_WRONLY | O_APPEND | O_CREAT , 0);
+            // close(fd);
 
-            //fp = freopen(current_next->name, "a", stdout);
-            //fclose(fp);
+            // fp = freopen(current_next->name, "a", stdout);
+            // fclose(fp);
+
+            fp=fopen(current_next->name,"a");
+            fclose(fp);
 
             output=current_next;
             // continue;
@@ -1043,7 +1049,7 @@ int SolveBiggerRedir(node * first_cmd, node * last_cmd, int exp_out){
         // printf("%s", file_contents);
         //fclose(fp_in);
 
-       // if(remove("temp")){}
+       if(remove("temp")){}
 
         char * test = strdup(output->name);
         only_append(test, file_contents, num);
@@ -1454,7 +1460,7 @@ void EjecuteLine(list* line)
 
     if(SpecialCaracters(temp)&& !RedirCaracter(temp))////cuando como primera palabra tenemos un caracter especial que no puede ocupar ese lugar
     {
-        printf("syntax error near unexpected token `%s' \n",temp);
+        printf("syntax error near unexpected token `%s'\n",temp);
         return;
     }
 
@@ -1489,8 +1495,8 @@ void EjecuteLine(list* line)
         //Expression * exp = (Expression*)malloc(sizeof(Expression));//para crear cada expresion de la lista de expresiones
         char* name=strdup(temp);
         bool special_caracter_now=SpecialCaracters(temp);//la expresion actual es un caracter especial
-        if(special_caracter_last && special_caracter_now){printf("syntax error near unexpected token `%s' \n",temp); return;}
-        if(if_caracter_last && special_caracter_now && !RedirCaracter(temp)){printf("syntax error near unexpected token `%s' \n",temp); return;}
+        if(special_caracter_last && special_caracter_now){printf("syntax error near unexpected token `%s'\n",temp); return;}
+        if(if_caracter_last && special_caracter_now && !RedirCaracter(temp)){printf("syntax error near unexpected token `%s'\n",temp); return;}
         if(special_caracter_last || if_caracter_last)command=true;
 
         //exp->operators=GetOperator(temp);
@@ -1523,6 +1529,7 @@ void EjecuteLine(list* line)
     // int _pid =fork();
     // if(_pid==0)
     // {
+    
     Execute(exp_line->head,exp_line->tail);
 
 
@@ -1598,23 +1605,24 @@ void ReadAndEjecuteLine(list* line,char* word, char c)//crea una lista de string
             if(c==';')
             {
                 ////////Primero terminar de armar la linea actual, y mandarla a ejecutar
-                if(strcmp(word,"")==0||strcmp(line->head->value,"init")==0)
+                if(strcmp(word,"")==0 && line->head->next==NULL)
                 {
-                    printf("syntax error near unexpected token `;' \n");
+                    printf("syntax error near unexpected token `;'\n");
                     return;
                 }
-                push_back(line, strdup(word));
-                strcpy(word,"");
-                pop_front(line);
-                EjecuteLine(line);
+                //push_back(line, strdup(word));
+                //strcpy(word,"");
+                //pop_front(line);
+                //EjecuteLine(line);
                 //print_list(line);
                 //pop_back(line);
-                free_list(line);
-                line=init_list("init");
+                //free_list(line);
+                //line=init_list("init");
 
-                c=GetOneChar(strline,history);
+                //c=GetOneChar(strline,history);
                 //c=GetOneChar();
-                continue;
+                //continue;
+                break;
             }
 
             if(SpecialCaracter(c))
@@ -1706,16 +1714,14 @@ void fflush_stdin() {
 void Shell()
 {
 
- printf("\n");
+printf("\n");
  while (1)
     {
         // int b = EOF;
         // printf("%d", b);
+        
         int std_in=dup(STDIN_FILENO);
         int std_out=dup(STDOUT_FILENO);
-        printf("my-shell $ ");
-        // fflush(stdout);
-
 
         char * word= (char*)calloc(sizeof(char),100);//word es cada una de las palabras que se mandan en un espacio de line
         strcpy(word,"");
@@ -1724,16 +1730,19 @@ void Shell()
         //pop_front(line);
 
         // wait(NULL);
+        printf("my-shell $ ");
         // fflush(stdin);
         
+
         char c;
         c = getchar();  //cada uno de los char a leer de consola
-        //bool concat=true;
+        // bool concat=true;
         // wait(NULL);
 
 
         ReadAndEjecuteLine(line,word,c);
 
+        // fflush(stdout);
 
         dup2(std_in,STDIN_FILENO);
         dup2(std_out,STDOUT_FILENO);
@@ -1772,3 +1781,5 @@ int main(int argc, char const *argv[])
     Shell();
     return 0;
 }
+
+
