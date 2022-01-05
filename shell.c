@@ -698,6 +698,8 @@ void Run(node * com){
             while(current != NULL){
                 exp = current->value;
                 if(exp->operators == REDIRBIG || exp->operators == DOUBLEREDIRBIG){
+                    FILE * fp = fopen("temp", "w");
+                    fclose(fp);
                     only_write("temp");
                     //fp_out = freopen("temp", "w", stdout);
                     break;
@@ -1325,6 +1327,7 @@ int Execute(node * first_cmd, node * last_cmd){
             // printf("%d\n", child_pid);
             // execvp(myargsaaa[0], myargsaaa);
             // break;
+            kill(pidC, SIGKILL);
         }
 
 

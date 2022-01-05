@@ -214,6 +214,7 @@ typedef struct Command // TODO: Cambiar nombre a: Expression
 void ConcatChar(char c, char *chain);
 linked_list *Transform(linked_list *);
 char Waiting();
+void Execute_Instruction(linked_list *);
 
 int only_write(char * file){
     int fd = open(file, O_WRONLY | O_CREAT);
@@ -368,6 +369,8 @@ void Run(node *com)
             while(current != NULL){
                 exp = current->value;
                 if(exp->operators == op_redir_big || exp->operators == op_double_redir_big){
+                    FILE * fd=fopen("temp","w");
+                    fclose(fd);
                     only_write("temp");
                     //fp_out = freopen("temp", "w", stdout);
                     break;
@@ -870,11 +873,17 @@ int SolveBiggerRedir(node *first_cmd, node *last_cmd, int exp_out)
 
         exp->std_out=strdup(file_contents);
 
+        remove("temp");
+
+        
+
         char * test = strdup(output->name);
         only_append(test, file_contents, num);
 
         // exp->std_out="1";
         redir_found = true;
+
+        
     }
 
     if (redir_found == false)
@@ -954,6 +963,7 @@ int Solve_Leaves(node *first_cmd, node *last_cmd)
     int exp_out = SolveCommands(first_cmd, last_cmd);
     return SolveBiggerRedir(first_cmd, last_cmd, exp_out);
 }
+
 
 // Leaves
 #define READ_op_end 0
@@ -1049,6 +1059,8 @@ int Execute(node *first_cmd, node *last_cmd)
             // printf("%d\n", child_pid);
             // execvp(myargsaaa[0], myargsaaa);
             // break;
+
+            kill(pidC, SIGKILL);
         }
 
         // wait(status);
@@ -1106,6 +1118,30 @@ int Execute(node *first_cmd, node *last_cmd)
     // Leaves
     return Solve_Leaves(first_cmd, last_cmd);
 }
+void Execute_Instruction(linked_list * line)
+{
+    //Command * com;
+    node * first=line->head;
+    bool state=false;
+
+    node * current=line->head;
+    while(current!=NULL)
+    {
+        state=false;
+        Command * current_com=current->value;
+        if(current_com->operators==op_semicolon)
+        {
+            state=true;
+            Execute(first,current->previous);
+            first=current->next;
+        }
+        current=current->next;
+    }
+    if(!state)
+    {
+        Execute(first,line->tail);
+    }
+}
 void ConcatChar(char c, char *chain)
 {
     char temp[2];
@@ -1158,20 +1194,21 @@ linked_list *Transform(linked_list *line)
     enum OPERATORS enum_oper[26] = {op_background, op_and, op_or, op_pipe, op_redir_big, op_double_redir_big, op_redir_less, op_false, op_if, op_else, op_end, op_then,
                                     op_true, op_exit, op_semicolon, op_cd, op_history, op_again, op_help, op_controlc, op_jobs, op_fg, op_set, op_get, op_unset, op_invertcomin};
 
-    node *expresion = (node *)malloc(sizeof(node));
+    node *expresion = (node *)calloc(1,sizeof(node));
     expresion->previous = NULL;
     commands_op->head = expresion;
 
     node *cadena = line->head;
     node *previous;
-    while (cadena != NULL)
+    int count=line->size;
+    while (cadena!=NULL)
     {
         str_anterior = str_actual;
         str_actual = cadena->value;
 
         bool state = false;
 
-        Command *command = (Command *)malloc(sizeof(Command));
+        Command *command = (Command *)calloc(1,sizeof(Command));
         expresion->value = command;
         //command=expresion->value;
         command->name = (char *)malloc(sizeof(char));
@@ -1222,10 +1259,11 @@ linked_list *Transform(linked_list *line)
                 }
             }
             previous = expresion;
-            expresion->next = (node *)malloc(sizeof(node));
+            expresion->next = (node *)calloc(1,sizeof(node));
             expresion = expresion->next;
             expresion->previous = previous;
         }
+        //count--;
     }
     commands_op->tail = expresion->previous;
     expresion = expresion->previous;
@@ -1254,8 +1292,10 @@ int main()
         int stdin_out=dup(STDOUT_FILENO);
 
         linked_list *cadena_ = (linked_list *)malloc(sizeof(linked_list));
-        cadena_->head = (node *)malloc(sizeof(node));
-        cadena_->head->value = (char *)malloc(sizeof(char));
+        cadena_->head=(node *)calloc(1,sizeof(node));
+       // cadena_->head = (node *)malloc(sizeof(node));
+        cadena_->head->value = (char *)calloc(100,sizeof(char));
+        //cadena_->head->value="";
         cadena_->size=0;
         node *cadena = cadena_->head;
         printf("\n my_shell:) $ ");
@@ -1273,34 +1313,38 @@ int main()
             {
                 if ((c == '&' || c == '|' || c == '<' || c == '>' || c == ';') && strlen(cadena->value) > 1)
                 {
-                    cadena->next = (node *)malloc(sizeof(node));
+                    cadena->next = (node *)calloc(1,sizeof(node));
                     cadena = cadena->next;
-                    cadena->value = (char *)malloc(sizeof(char));
+                    cadena->value = (char *)calloc(100,sizeof(char));
+                    //cadena->value="";
                     //cadena_->size+=1;
                     
                 }
                 if ((c == '&' && anterior == '&') || (c == '|' && anterior == '|') || (c == '>' && anterior == '>'))
                 {
                     ConcatChar(c, cadena->value);
-                    cadena->next = (node *)malloc(sizeof(node));
+                    cadena->next = (node *)calloc(1,sizeof(node));
                     cadena = cadena->next;
-                    cadena->value = (char *)malloc(sizeof(char));
+                    cadena->value = (char *)calloc(100,sizeof(char));
+                    //cadena->value="";
                     //cadena_->size+=1;
                 }
                 else if (c != ' ' && (((anterior == '&' || anterior == '|' || anterior == '>' || anterior == '<' || anterior == ';') && strlen(cadena->value) != 0) || ((c == '>' || c == '|' || c == '<' || c == '&' || c == ';') && strlen(cadena->value) > 0)))
                 {
-                    cadena->next = (node *)malloc(sizeof(node));
+                    cadena->next = (node *)calloc(1,sizeof(node));
                     cadena = cadena->next;
-                    cadena->value = (char *)malloc(sizeof(char));
+                    cadena->value = (char *)calloc(100,sizeof(char));
+                    //cadena->value="";
                     ConcatChar(c, cadena->value);
                     //cadena_->size+=1;
                 }
                 else if (c == ' ')
                 {
-                    cadena->next = (node *)malloc(sizeof(node));
+                    cadena->next = (node *)calloc(1,sizeof(node));
                     cadena = cadena->next;
-                    cadena->value = (char *)malloc(sizeof(char));
-                    //cadena_->size+=1;
+                    cadena->value = (char *)calloc(100,sizeof(char));
+                    //cadena->value="";
+                    cadena_->size+=1;
                 }
                 else if(c=='\n')
                 {
@@ -1316,7 +1360,7 @@ int main()
 
         node *node_anterior = NULL;
         node *node_actual = cadena_->head;
-       // int count=cadena_->size;
+        //int count=cadena_->size;
 
         while (node_actual!=NULL)
         {
@@ -1343,7 +1387,8 @@ int main()
         //cadena_->tail->value = last;
 
         linked_list *commands_op = Transform(cadena_);
-        Execute(commands_op->head, commands_op->tail);
+        Execute_Instruction(commands_op);
+        //Execute(commands_op->head, commands_op->tail);
 
         dup2(stdin_in,STDIN_FILENO);
         dup2(stdin_out,STDOUT_FILENO);
@@ -1351,6 +1396,7 @@ int main()
         close(stdin_out);
 
         free_list(cadena_);
+       // free(cadena);
        // free_list(commands_op);
         ///free(last);
 
