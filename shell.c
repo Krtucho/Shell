@@ -214,6 +214,7 @@ enum OPERATORS{
     CD=6,
     HISTORY=4,
     HELP=5,
+    AGAIN=10,
     GET=9,
     UNSET=8,
     SET=7,
@@ -250,10 +251,10 @@ typedef struct Expression// TODO: Cambiar nombre a: Expression
 
 #pragma region Utiles
 
-static char *special_strings[] = {"true","false","exit","cd","history","help","set","`","get","unset","&&","||",
+static char *special_strings[] = {"true","false","exit","cd","history","help","again","set","`","get","unset","&&","||",
                         "|","if",">","then","else","end","<",">>" };
 
-static int specials_operators[] = { TRUE, FALSE, EXIT,CD, HISTORY, HELP,SET,SET_CHARACTER, GET, UNSET,AND , OR,
+static int specials_operators[] = { TRUE, FALSE, EXIT,CD, HISTORY, HELP,AGAIN,SET,SET_CHARACTER, GET, UNSET,AND , OR,
                 PIPE,IF,REDIRBIG,THEN, ELSE,END,REDIRLESS,DOUBLEREDIRBIG};
 
 void ConcatChar(char c, char *chain)
@@ -266,7 +267,7 @@ void ConcatChar(char c, char *chain)
 
 int GetIndexOF(char* word)
 {
-    for (int i = 0; i < 20/*sizeof(special_strings)*/; i++)
+    for (int i = 0; i < 21/*sizeof(special_strings)*/; i++)
     {
         if(strcmp(special_strings[i],word)==0)return i;
     }
@@ -374,7 +375,7 @@ bool PossibleArgumentExpression(int op)
 
 #pragma region Comandos Especiales
 
-
+#pragma region Help
 void help_init()
 {
     printf("Integrantes: Carlos Carret Miranda(C212)\n"
@@ -500,6 +501,7 @@ int HELP_CODE(node* argument)
     return 0;
 
 }
+#pragma endregion
 
 
 int CD_CODE(node* argument)
@@ -521,6 +523,7 @@ int CD_CODE(node* argument)
     return 0;
 }
 
+//void Shell();
 bool did_ctrl_c;
 int pid;
 int pid_inicial;
@@ -531,25 +534,126 @@ void CtrlC()
    // printf("Bool:%d\n",did_ctrl_c);
     if(did_ctrl_c)
     {
-        //pid=getpid();
-        //printf("%d",pid);
+        //int pidnow=getpid();
+        //printf("PID Now: %d\n",pidnow);
+        //printf("PID: %d\n",pid);
+        //if(pid!=pid_inicial) {kill(pid,1);}
+        did_ctrl_c=false;
+
         if(pid!=pid_inicial) kill(pid,9);
+
+        //else             
+          //  write(stdin, strdup("\n"),1);
+
+
+        //int*status=0;
+        //int child_pid = waitpid(pid_inicial, status, WNOHANG);
+        //printf("Lo que devuelve el wait:%d\n",child_pid);
     }
     else
     {
         did_ctrl_c=true;
+        if(pid==pid_inicial) 
+        {
+            did_ctrl_c=false;
+            // char buf[10];
+            // write(STDIN_FILENO, strdup("\n"),1);
+            // read(STDIN_FILENO, buf, 3);
+            //close(STDIN_FILENO);
+           // did_ctrl_c=false;
+            //printf("LLego al ctrlC\n");
+            //Shell();
+            //did_ctrl_c=false;
+
+        }
+
+        //int pidnow=getpid();
+        //printf("PID Now: %d\n",pidnow);
+        //printf("PID: %d\n",pid);
+        //if(pid!=pid_inicial) {kill(pid,9);}
+        //int*status=0;
+        //int child_pid = waitpid(pid_inicial, status, WNOHANG);
+        //printf("Lo que devuelve el wait:%d",child_pid);
         //kill(pid,SIGTERM);
     }
 }
+char history_direction[200];
+
+#pragma region History
+
+
+int only_write(char * file);
+int only_append(char * file, char buf[1000], int num);
+int input_read(char * file);
 
 int HISTORY_CODE(node* argument)
 {
-
+    
 
     return 0;
 }
+int AGAIN_CODE(node*argument)
+{
+
+}
+int ReadHistory(list*history_lines,char* file_contents,int fc_size)
+{
+    int count=0;
+    
+    for (int i = 0; i < fc_size; i++)
+    {
+        if(file_contents[i]=='\n')count++;
+    }
+    return count;
+    
+}
+void SaveLine(char* strline)
+{
+    return;
+    int std_in=dup(STDIN_FILENO);
+    int std_out=dup(STDOUT_FILENO);
+
+    input_read(history_direction);
+    char file_contents[1000];
+    int num=read(STDIN_FILENO,file_contents,sizeof(file_contents));
+
+    list*history_lines=init_list("init");
+    int count=ReadHistory(history_lines,file_contents,num);
+    push_back(history_lines,strline);
+    pop_front(history_lines);
+    if(count>=10)pop_front(history_lines);
+    
+    char* history_output=calloc(sizeof(char),1000);
+
+    while(count>0)
+    {
+        //push_back(history_output)
+        strcat(history_output,history_lines->head->value);
+        strcat(history_output,"\n");
+        count--;
+        free(pop_front(history_lines));
+    }
+    
+
+    FILE * fp = fopen(history_direction, "w");
+    fclose(fp);        
+    only_write(history_direction);
+    printf("%s",history_output);
+
+    free(history_lines);
+    free(history_output);
+
+    dup2(std_in,STDIN_FILENO);
+    dup2(std_out,STDOUT_FILENO);
+    close(std_in);
+    close(std_out);
+}
 
 #pragma endregion
+
+
+#pragma endregion
+
 
 #pragma region Ejecucion
 int only_write(char * file){
@@ -640,8 +744,15 @@ void Run(node * com){
 
     //FILE * fp;
     //FILE * fp_out;
+    //printf("Voy a hacer fork\n");
+
     pid_t rc = fork();
+    //printf("Acabo de hacer fork\n");
+
+  //  printf("Pid anterior:%d\n",pid);
     pid=rc;
+   // printf("Pid del fork:%d\n",pid);
+
     did_ctrl_c=false;
 
     // char * buf;
@@ -650,6 +761,7 @@ void Run(node * com){
         fprintf(stderr, "fork failed\n");
         exit(1);
     } else if (rc == 0) { // child (new process)
+       // printf("Estoy en el fork, pid:%d\n",pid);
 
         Expression * com_prev;// = com->previous;
         if(com->previous != NULL){
@@ -864,6 +976,18 @@ int SET_CODE(node* exp){
     return 0;
 }
 
+int GET_CODE(node* exp)
+{
+
+}
+
+int UNSET_CODE(node* exp)
+{
+
+}
+
+
+
 int (*testing[])(node*) = {
         TRUE_CODE,
         FALSE_CODE,
@@ -873,8 +997,9 @@ int (*testing[])(node*) = {
         HELP_CODE,
         CD_CODE,
         SET_CODE,
-        // GET_CODE,
-        // UNSET_CODE,
+        GET_CODE,
+        UNSET_CODE,
+        AGAIN_CODE,
         0
 	};
 
@@ -1278,8 +1403,13 @@ int Execute(node * first_cmd, node * last_cmd){
 
         inside_pipe = true;
         pipe(fd);
+      //  printf("Se va a hacer fork\n");
         pidC = fork();
+      //  printf("Se hizo fork\n");
+
+     //   printf("pid antes del fork: %d\n",pid);
         pid=pidC;//getpid();
+     //   printf("pid despues del fork: %d\n",pid);
         did_ctrl_c=false;
         if(pidC==0){
             close(fd[0]);
@@ -1460,6 +1590,7 @@ void EjecuteLine(list* line)
     Expression * exp1 = (Expression*)malloc(sizeof(Expression));//para guardar la primera expresion
 
     char* temp = pop_front(line)->value; //guarda temporalmente el primer valor de la lista de string
+    if(strcmp("^C",temp)==0)return;
 
     // if(temp==';')
     // {
@@ -1502,11 +1633,13 @@ void EjecuteLine(list* line)
         //Expression * exp = (Expression*)malloc(sizeof(Expression));//para crear cada expresion de la lista de expresiones
         char* name=strdup(temp);
 
+
         if(strcmp(";",name)==0)
         {
             free(pop_front(line));
             Execute(exp_line->head,exp_line->tail);
             if(line->head!=NULL) EjecuteLine(line);
+            pid=getpid();
             //EjecuteLine(line);
             return;
         }
@@ -1549,7 +1682,7 @@ void EjecuteLine(list* line)
     
     Execute(exp_line->head,exp_line->tail);
 
-
+    pid=getpid();
     //char message[20];
     //read(STDOUT_FILENO, message, 20);
     //write(STDIN_FILENO, message, 20);
@@ -1577,11 +1710,14 @@ void ReadAndEjecuteLine(list* line,char* word, char c)//crea una lista de string
 {
     bool history=true;
     if(c==' ') history=false;
-    char *strline=(char*)calloc(sizeof(char),500);
+    char *strline=(char*)calloc(sizeof(char),1000);
     if(history)ConcatChar(c,strline);
 
     while(c!= '\n' && c!= EOF)
     {
+
+        //printf("Llego al while true\n");
+
         if(c==-1) exit(0);
 
             if(c=='#')
@@ -1715,7 +1851,7 @@ void ReadAndEjecuteLine(list* line,char* word, char c)//crea una lista de string
         free(word);
         pop_front(line);
         //print_list(line);
-
+        if(history)SaveLine(strline);
         if(line->head!=NULL) EjecuteLine(line);
 
         //free_list(line);
@@ -1732,6 +1868,7 @@ void fflush_stdin() {
 
 void Shell()
 {
+    //signal(SIGINT,CtrlC);
 
 printf("\n");
  while (1)
@@ -1749,6 +1886,7 @@ printf("\n");
         //pop_front(line);
 
         // wait(NULL);
+        //printf("Llego al inicio\n");
         if(pid_inicial==getpid()) printf("my-shell $ ");
         // fflush(stdin);
         
@@ -1788,16 +1926,21 @@ printf("\n");
 }
 
 #pragma endregion
-
 int main(int argc, char const *argv[])
 {
+    getcwd(history_direction,200);
+    strcat(history_direction,"/.history.txt");
+
+    //printf("%s",history_direction);
     signal(SIGINT,CtrlC);
+
     //fork();
     pid=getpid();
     pid_inicial=getpid();
     did_ctrl_c=false;
+
     //pid=fork();
-    //printf("%d",pid);
+    //printf("PID inicial: %d\n",pid);
     //if(pid!=0) Shell();
     Shell();
     return 0;
