@@ -321,6 +321,7 @@ int SpecialCaracter(char c)//devuelve si es un caracter especial simple
     if(c=='<')return 1;
     if(c=='>')return 1;
     if(c=='`')return 1;
+    if(c==';')return 1;
     return 0;
 }
 
@@ -336,6 +337,8 @@ int SpecialCaracters(char* c)//devuelve si es un caracter especial en general
     if(strcmp(c,"&&")==0)return 1;
     if(strcmp(c,"||")==0)return 1;
     if(strcmp(c,">>")==0)return 1;
+    if(strcmp(c,";")==0)return 1;
+
     // if(c=="|")return 1;
     // if(c=="<")return 1;
     // if(c==">")return 1;
@@ -368,7 +371,6 @@ bool PossibleArgumentExpression(int op)
 }
 
 #pragma endregion
-
 
 #pragma region Comandos Especiales
 
@@ -549,7 +551,6 @@ int HISTORY_CODE(node* argument)
 
 #pragma endregion
 
-
 #pragma region Ejecucion
 int only_write(char * file){
     int fd = open(file, O_WRONLY | O_CREAT);
@@ -698,6 +699,8 @@ void Run(node * com){
             while(current != NULL){
                 exp = current->value;
                 if(exp->operators == REDIRBIG || exp->operators == DOUBLEREDIRBIG){
+                    FILE * fp = fopen("temp", "w");
+                    fclose(fp);
                     only_write("temp");
                     //fp_out = freopen("temp", "w", stdout);
                     break;
@@ -1325,6 +1328,7 @@ int Execute(node * first_cmd, node * last_cmd){
             // printf("%d\n", child_pid);
             // execvp(myargsaaa[0], myargsaaa);
             // break;
+            kill(pidC, SIGKILL);
         }
 
 
@@ -1442,7 +1446,6 @@ int Execute(node * first_cmd, node * last_cmd){
 }
 #pragma endregion
 
-
 #pragma region Parser
 
 
@@ -1458,6 +1461,10 @@ void EjecuteLine(list* line)
 
     char* temp = pop_front(line)->value; //guarda temporalmente el primer valor de la lista de string
 
+    // if(temp==';')
+    // {
+    //     printf("syntax error near unexpected token `%s'\n",temp);
+    // }
     if(SpecialCaracters(temp)&& !RedirCaracter(temp))////cuando como primera palabra tenemos un caracter especial que no puede ocupar ese lugar
     {
         printf("syntax error near unexpected token `%s'\n",temp);
@@ -1494,6 +1501,15 @@ void EjecuteLine(list* line)
 
         //Expression * exp = (Expression*)malloc(sizeof(Expression));//para crear cada expresion de la lista de expresiones
         char* name=strdup(temp);
+
+        if(strcmp(";",name)==0)
+        {
+            free(pop_front(line));
+            Execute(exp_line->head,exp_line->tail);
+            EjecuteLine(line);
+            return;
+        }
+
         bool special_caracter_now=SpecialCaracters(temp);//la expresion actual es un caracter especial
         if(special_caracter_last && special_caracter_now){printf("syntax error near unexpected token `%s'\n",temp); return;}
         if(if_caracter_last && special_caracter_now && !RedirCaracter(temp)){printf("syntax error near unexpected token `%s'\n",temp); return;}
@@ -1564,7 +1580,8 @@ void ReadAndEjecuteLine(list* line,char* word, char c)//crea una lista de string
     if(history)ConcatChar(c,strline);
 
     while(c!= '\n' && c!= EOF)
-        {
+    {
+        if(c==-1) exit(0);
 
             if(c=='#')
             {
@@ -1602,28 +1619,29 @@ void ReadAndEjecuteLine(list* line,char* word, char c)//crea una lista de string
             // // // //     /////verificar que primero se busca un and para despues comprobar que sea un &
             // // // // }
 
-            if(c==';')
-            {
-                ////////Primero terminar de armar la linea actual, y mandarla a ejecutar
-                if(strcmp(word,"")==0 && line->head->next==NULL)
-                {
-                    printf("syntax error near unexpected token `;'\n");
-                    return;
-                }
-                //push_back(line, strdup(word));
-                //strcpy(word,"");
-                //pop_front(line);
-                //EjecuteLine(line);
-                //print_list(line);
-                //pop_back(line);
-                //free_list(line);
-                //line=init_list("init");
+            // if(c==';')
+            // {
+            //     // ////////Primero terminar de armar la linea actual, y mandarla a ejecutar
+            //     // if(strcmp(word,"")==0 && line->head->next==NULL)
+            //     // {
+            //     //     printf("syntax error near unexpected token `;'\n");
+            //     //     return;
+            //     // }
+            //     // //push_back(line, strdup(word));
+            //     // //strcpy(word,"");
+            //     // //pop_front(line);
+            //     // //EjecuteLine(line);
+            //     // //print_list(line);
+            //     // //pop_back(line);
+            //     // //free_list(line);
+            //     // //line=init_list("init");
 
-                //c=GetOneChar(strline,history);
-                //c=GetOneChar();
-                //continue;
-                break;
-            }
+            //     // //c=GetOneChar(strline,history);
+            //     // //c=GetOneChar();
+            //     // //continue;
+            //     // break;
+
+            // }
 
             if(SpecialCaracter(c))
             {
@@ -1730,12 +1748,14 @@ printf("\n");
         //pop_front(line);
 
         // wait(NULL);
-        printf("my-shell $ ");
+        if(pid_inicial==getpid()) printf("my-shell $ ");
         // fflush(stdin);
         
 
         char c;
         c = getchar();  //cada uno de los char a leer de consola
+
+        if(c==-1) exit(0);
         // bool concat=true;
         // wait(NULL);
 
