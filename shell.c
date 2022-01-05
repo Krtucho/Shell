@@ -1506,7 +1506,8 @@ void EjecuteLine(list* line)
         {
             free(pop_front(line));
             Execute(exp_line->head,exp_line->tail);
-            EjecuteLine(line);
+            if(line->head!=NULL) EjecuteLine(line);
+            //EjecuteLine(line);
             return;
         }
 
