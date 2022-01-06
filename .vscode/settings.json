@@ -6,6 +6,7 @@
         "execute.h": "c",
         "stdlib.h": "c",
         "unistd.h": "c",
-        "wait.h": "c"
+        "wait.h": "c",
+        "algorithm": "c"
     }
 }

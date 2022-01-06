@@ -1056,11 +1056,10 @@ int Execute(node *first_cmd, node *last_cmd)
             // printf("I'm in execute 2...\n");
             output = Execute(PIPE_node->next, last_cmd);
             int child_pid = waitpid(-1, status, WNOHANG);
+            kill(pidC,SIGKILL);
             // printf("%d\n", child_pid);
             // execvp(myargsaaa[0], myargsaaa);
             // break;
-
-            kill(pidC, SIGKILL);
         }
 
         // wait(status);
@@ -1160,18 +1159,14 @@ char Waiting()
 }
 linked_list *Transform(linked_list *line)
 {
+    bool is_operator=false;
+    bool if_inside=false;
+    //bool is_command=false;
     linked_list *commands_op = (linked_list *)malloc(sizeof(linked_list));
     char *str_anterior = NULL;
     char *str_actual = NULL;
 
-    char *operadores[26] = {
-        "&",
-        "&&",
-        "||",
-        "|",
-        ">",
-        ">>",
-        "<",
+    char * commands[17]={
         "false",
         "if",
         "else",
@@ -1179,7 +1174,6 @@ linked_list *Transform(linked_list *line)
         "then",
         "true",
         "exit",
-        ";",
         "cd",
         "history",
         "again",
@@ -1190,9 +1184,22 @@ linked_list *Transform(linked_list *line)
         "set",
         "get",
         "unset",
+    };
+    enum OPERATORS enum_comm[17]={op_false, op_if, op_else, op_end, op_then,op_true, op_exit,op_cd, op_history, op_again, op_help,
+                           op_controlc, op_jobs, op_fg, op_set, op_get, op_unset,};
+
+    char *operadores[9] = {
+        "&",
+        "&&",
+        "||",
+        "|",
+        ">",
+        ">>",
+        "<",
+        ";",
         "``"};
-    enum OPERATORS enum_oper[26] = {op_background, op_and, op_or, op_pipe, op_redir_big, op_double_redir_big, op_redir_less, op_false, op_if, op_else, op_end, op_then,
-                                    op_true, op_exit, op_semicolon, op_cd, op_history, op_again, op_help, op_controlc, op_jobs, op_fg, op_set, op_get, op_unset, op_invertcomin};
+    enum OPERATORS enum_oper[9] = {op_background, op_and, op_or, op_pipe, op_redir_big, op_double_redir_big, op_redir_less, 
+                                    op_semicolon,  op_invertcomin};
 
     node *expresion = (node *)calloc(1,sizeof(node));
     expresion->previous = NULL;
@@ -1220,21 +1227,58 @@ linked_list *Transform(linked_list *line)
         }
         else
         {
-
-            for (int i = 0; i < 26; i++)
+            if(is_operator || str_anterior==NULL)
             {
-                if (strcmp(str_actual, operadores[i]) == 0)
+                for (int i = 0; i < 17; i++)
                 {
-                    command->operators = enum_oper[i];
-                    cadena = cadena->next;
-                    state = true;
-                    break;
+                    if (strcmp(str_actual, commands[i]) == 0)
+                    {
+                        if(enum_comm[i]==op_if)
+                        {
+                            if_inside=true;
+                        }
+                        else if(enum_comm[i]==op_end)
+                        {
+                            if_inside=false;
+                        }
+                        // if(enum_comm[i]==op_if || enum_comm[i]==op_else || enum_comm[i]==op_then)
+                        // {
+                        //     is_operator=true;
+                        // }
+                        // else
+                        // {
+                        //     is_operator=false;
+                        // }
+                        is_operator=false;
+                        command->operators = enum_comm[i];
+                        cadena = cadena->next;
+                        state = true;
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                for (int i = 0; i < 9; i++)
+                {
+                    if (strcmp(str_actual, operadores[i]) == 0)
+                    {
+                        if(enum_oper[i]!= op_redir_big && enum_oper[i]!=op_redir_less && enum_oper[i]!=op_double_redir_big)
+                        {
+                            is_operator=true;
+                        }
+                        command->operators = enum_oper[i];
+                        cadena = cadena->next;
+                        state = true;
+                        break;
+                    }
                 }
             }
             if (!state)
             {
                 if (str_anterior == NULL)
                 {
+                    is_operator=false;
                     command->operators = op_simple_expression;
                     cadena = cadena->next;
                 }
@@ -1243,18 +1287,26 @@ linked_list *Transform(linked_list *line)
                     Command *temp = previous->value;
                     if (temp->operators == op_args || temp->operators == op_simple_expression || temp->operators == op_cd || temp->operators == op_help || temp->operators == op_again)
                     {
+                        is_operator=false;
                         command->operators = op_args;
                         cadena = cadena->next;
                     }
                     else if (temp->operators == op_redir_big || temp->operators == op_redir_less || temp->operators == op_double_redir_big)
                     {
+                        is_operator=false;
                         command->operators = op_archive;
                         cadena = cadena->next;
                     }
                     else if (temp->operators == op_and || temp->operators == op_or || temp->operators == op_pipe || temp->operators == op_if || temp->operators == op_then || temp->operators == op_else || temp->operators == op_end || temp->operators == op_semicolon)
                     {
+                        is_operator=false;
                         command->operators = op_simple_expression;
                         cadena = cadena->next;
+                    }
+                    else 
+                    {
+                        perror("line not valid");
+                        //return -1;
                     }
                 }
             }
@@ -1288,117 +1340,120 @@ int main()
 
     while (1)
     { //FALTA LO DEL ;
-        int stdin_in=dup(STDIN_FILENO);
-        int stdin_out=dup(STDOUT_FILENO);
-
-        linked_list *cadena_ = (linked_list *)malloc(sizeof(linked_list));
-        cadena_->head=(node *)calloc(1,sizeof(node));
-       // cadena_->head = (node *)malloc(sizeof(node));
-        cadena_->head->value = (char *)calloc(100,sizeof(char));
-        //cadena_->head->value="";
-        cadena_->size=0;
-        node *cadena = cadena_->head;
-        printf("\n my_shell:) $ ");
-        char c;
-        char anterior;
-        do
+        if(getpid()== Pid)
         {
-            anterior = c;
-            c = getchar();
-            if (c == '#')
+            int stdin_in=dup(STDIN_FILENO);
+            int stdin_out=dup(STDOUT_FILENO);
+
+            linked_list *cadena_ = (linked_list *)malloc(sizeof(linked_list));
+            cadena_->head=(node *)calloc(1,sizeof(node));
+            // cadena_->head = (node *)malloc(sizeof(node));
+            cadena_->head->value = (char *)calloc(100,sizeof(char));
+            //cadena_->head->value="";
+            cadena_->size=0;
+            node *cadena = cadena_->head;
+            printf("\n my_shell:) $ ");
+            char c;
+            char anterior;
+            do
             {
-                c = Waiting();
-            }
-            else
-            {
-                if ((c == '&' || c == '|' || c == '<' || c == '>' || c == ';') && strlen(cadena->value) > 1)
+                anterior = c;
+                c = getchar();
+                if (c == '#')
                 {
-                    cadena->next = (node *)calloc(1,sizeof(node));
-                    cadena = cadena->next;
-                    cadena->value = (char *)calloc(100,sizeof(char));
-                    //cadena->value="";
-                    //cadena_->size+=1;
-                    
-                }
-                if ((c == '&' && anterior == '&') || (c == '|' && anterior == '|') || (c == '>' && anterior == '>'))
-                {
-                    ConcatChar(c, cadena->value);
-                    cadena->next = (node *)calloc(1,sizeof(node));
-                    cadena = cadena->next;
-                    cadena->value = (char *)calloc(100,sizeof(char));
-                    //cadena->value="";
-                    //cadena_->size+=1;
-                }
-                else if (c != ' ' && (((anterior == '&' || anterior == '|' || anterior == '>' || anterior == '<' || anterior == ';') && strlen(cadena->value) != 0) || ((c == '>' || c == '|' || c == '<' || c == '&' || c == ';') && strlen(cadena->value) > 0)))
-                {
-                    cadena->next = (node *)calloc(1,sizeof(node));
-                    cadena = cadena->next;
-                    cadena->value = (char *)calloc(100,sizeof(char));
-                    //cadena->value="";
-                    ConcatChar(c, cadena->value);
-                    //cadena_->size+=1;
-                }
-                else if (c == ' ')
-                {
-                    cadena->next = (node *)calloc(1,sizeof(node));
-                    cadena = cadena->next;
-                    cadena->value = (char *)calloc(100,sizeof(char));
-                    //cadena->value="";
-                    cadena_->size+=1;
-                }
-                else if(c=='\n')
-                {
-                    break;
+                    c = Waiting();
                 }
                 else
                 {
-                    ConcatChar(c, cadena->value);
+                    if ((c == '&' || c == '|' || c == '<' || c == '>' || c == ';') && strlen(cadena->value) > 1)
+                    {
+                        cadena->next = (node *)calloc(1,sizeof(node));
+                        cadena = cadena->next;
+                        cadena->value = (char *)calloc(100,sizeof(char));
+                        //cadena->value="";
+                        //cadena_->size+=1;
+                        
+                    }
+                    if ((c == '&' && anterior == '&') || (c == '|' && anterior == '|') || (c == '>' && anterior == '>'))
+                    {
+                        ConcatChar(c, cadena->value);
+                        cadena->next = (node *)calloc(1,sizeof(node));
+                        cadena = cadena->next;
+                        cadena->value = (char *)calloc(100,sizeof(char));
+                        //cadena->value="";
+                        //cadena_->size+=1;
+                    }
+                    else if (c != ' ' && (((anterior == '&' || anterior == '|' || anterior == '>' || anterior == '<' || anterior == ';') && strlen(cadena->value) != 0) || ((c == '>' || c == '|' || c == '<' || c == '&' || c == ';') && strlen(cadena->value) > 0)))
+                    {
+                        cadena->next = (node *)calloc(1,sizeof(node));
+                        cadena = cadena->next;
+                        cadena->value = (char *)calloc(100,sizeof(char));
+                        //cadena->value="";
+                        ConcatChar(c, cadena->value);
+                        //cadena_->size+=1;
+                    }
+                    else if (c == ' ')
+                    {
+                        cadena->next = (node *)calloc(1,sizeof(node));
+                        cadena = cadena->next;
+                        cadena->value = (char *)calloc(100,sizeof(char));
+                        //cadena->value="";
+                        cadena_->size+=1;
+                    }
+                    else if(c=='\n')
+                    {
+                        break;
+                    }
+                    else
+                    {
+                        ConcatChar(c, cadena->value);
+                    }
                 }
-            }
 
-        } while (c != '\n' && c!=EOF);
+            } while (c != '\n' && c!=EOF);
 
-        node *node_anterior = NULL;
-        node *node_actual = cadena_->head;
-        //int count=cadena_->size;
+            node *node_anterior = NULL;
+            node *node_actual = cadena_->head;
+            //int count=cadena_->size;
 
-        while (node_actual!=NULL)
-        {
-
-            if (node_actual->value!=NULL && strlen(node_actual->value) == 0)
+            while (node_actual!=NULL)
             {
-                if (node_anterior != NULL)
+
+                if (node_actual->value!=NULL && strlen(node_actual->value) == 0)
                 {
-                    node_anterior->next = node_actual->next;
-                    node_actual = node_anterior;
+                    if (node_anterior != NULL)
+                    {
+                        node_anterior->next = node_actual->next;
+                        node_actual = node_anterior;
+                    }
+                    else
+                    {
+                        node_actual = node_actual->next;
+                    }
                 }
-                else
-                {
-                    node_actual = node_actual->next;
-                }
+                node_anterior = node_actual;
+                node_actual = node_actual->next;
+                //count--;
             }
-            node_anterior = node_actual;
-            node_actual = node_actual->next;
-            //count--;
+            cadena_->tail = node_anterior;
+            // char *last = (char *)malloc(sizeof(char));
+            // last = strncat(last, cadena_->tail->value, strlen(cadena_->tail->value) - 1);
+            //cadena_->tail->value = last;
+
+            linked_list *commands_op = Transform(cadena_);
+            Execute_Instruction(commands_op);
+            //Execute(commands_op->head, commands_op->tail);
+
+            dup2(stdin_in,STDIN_FILENO);
+            dup2(stdin_out,STDOUT_FILENO);
+            close(stdin_in);
+            close(stdin_out);
+
+            free_list(cadena_);
+            // free(cadena);
+             // free_list(commands_op);
+            ///free(last);
         }
-        cadena_->tail = node_anterior;
-        // char *last = (char *)malloc(sizeof(char));
-        // last = strncat(last, cadena_->tail->value, strlen(cadena_->tail->value) - 1);
-        //cadena_->tail->value = last;
-
-        linked_list *commands_op = Transform(cadena_);
-        Execute_Instruction(commands_op);
-        //Execute(commands_op->head, commands_op->tail);
-
-        dup2(stdin_in,STDIN_FILENO);
-        dup2(stdin_out,STDOUT_FILENO);
-        close(stdin_in);
-        close(stdin_out);
-
-        free_list(cadena_);
-       // free(cadena);
-       // free_list(commands_op);
-        ///free(last);
 
         
     }
