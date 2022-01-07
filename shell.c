@@ -823,6 +823,10 @@ void Run(node * com){
 
         int e = execvp(myargs[0], myargs);
 
+        if(e == -1){
+            printf("%s: command not found\n", myargs[0]);
+            exit(-1);
+        }
         //int e = execvp(myargs[0], myargs);
         // fclose(stdin);
         // fclose(stdout);
@@ -967,7 +971,7 @@ int PrintVariables(){
         char * c = getenv(current_exp);
         if(c!= NULL)
             strcat(output, c);
-        if(&current == &var_list->tail)
+        if(current != var_list->tail)
             strcat(output, "\n");
         current = current->next;
     }
@@ -1051,9 +1055,10 @@ int ExecuteSetCharacter(char * key, node* beg , node * last){
     input_read("temp2");
 
 
-    char file_contents[10000];
+    char file_contents[1000];
     int num=read(STDIN_FILENO,file_contents,sizeof(file_contents));
     file_contents[num] = '\0';
+    printf("%d",num);
     //fread(file_contents,sb.st_size,1,fp_in);
 
     // exp->std_out=strdup(file_contents);
@@ -1063,6 +1068,7 @@ int ExecuteSetCharacter(char * key, node* beg , node * last){
 
     AddVar(key, file_contents);
 
+    // free(file_contents);
     // close(std_in);
     // close(std_out);
 
@@ -1459,7 +1465,7 @@ int GET_CODE(node* exp)
     if(output == NULL)
         return -1;
     
-    printf("%s\n", output);
+    printf("%s", output);
     return 0;
 }
 
@@ -2397,7 +2403,7 @@ printf("\n");
         int std_in=dup(STDIN_FILENO);
         int std_out=dup(STDOUT_FILENO);
 
-        char * word= (char*)calloc(sizeof(char),100);//word es cada una de las palabras que se mandan en un espacio de line
+        char * word= (char*)calloc(sizeof(char),1000);//word es cada una de las palabras que se mandan en un espacio de line
         strcpy(word,"");
 
         list* line=init_list("init"); //line es la linked list que guarda los comandos argumentos y caracteres especiales
