@@ -967,7 +967,7 @@ int PrintVariables(){
         char * c = getenv(current_exp);
         if(c!= NULL)
             strcat(output, c);
-        if(current->next != NULL)
+        if(&current == &var_list->tail)
             strcat(output, "\n");
         current = current->next;
     }
@@ -1051,7 +1051,7 @@ int ExecuteSetCharacter(char * key, node* beg , node * last){
     input_read("temp2");
 
 
-    char file_contents[1000];
+    char file_contents[10000];
     int num=read(STDIN_FILENO,file_contents,sizeof(file_contents));
     file_contents[num] = '\0';
     //fread(file_contents,sb.st_size,1,fp_in);
@@ -2056,10 +2056,13 @@ int Execute(node * first_cmd, node * last_cmd){
         node * END_node = Search_IF_THEN_ELSE(THEN_node, last_cmd, END);
         node * ELSE_node = Search_IF_THEN_ELSE(THEN_node, last_cmd, ELSE);
 
+        
         //Caso 1 para IF ELSE
         int IF_output = Execute(IF_ELSE_node->next, THEN_node->previous); // Aca se supone que se modifique la variable first_cmd, para que luego apunte hacia la instruccion siguiente al
         if(IF_output==0){ // Si devuelve True es xq tiene q ir hacia el THEN
             // Ejecuta el Then
+            if(ELSE_node == NULL)
+                ELSE_node = END_node;
             return Execute(THEN_node->next, ELSE_node->previous);
         }
         else if(ELSE_node != NULL){
