@@ -378,8 +378,8 @@ bool PossibleArgumentExpression(int op)
 #pragma region Help
 void help_init()
 {
-    printf("Integrantes: Carlos Carret Miranda(C212)\n"
-                         "Lauren Guerra Hernandez(C212)\n"
+    printf("Integrantes: Carlos Carret Miranda(C-212)\n"
+                         "Lauren Guerra Hernandez(C-212)\n"
         "Funcionalidades:\n"
         "basic: funcionalidades básicas (1-8)  (3 puntos)\n"
         "multi-pipe: múltiples tuberías  (9)   (1 punto)\n"
@@ -577,10 +577,67 @@ void CtrlC()
         //kill(pid,SIGTERM);
     }
 }
-char history_direction[200];
 
 #pragma region History
 
+char history_direction[200];
+char again_direction[200];
+bool did_again;
+
+int StrToInt(char* n)
+{
+    if(strcmp(n,"1")==0)return 1;
+    if(strcmp(n,"2")==0)return 2;
+    if(strcmp(n,"3")==0)return 3;
+    if(strcmp(n,"4")==0)return 4;
+    if(strcmp(n,"5")==0)return 5;
+    if(strcmp(n,"6")==0)return 6;
+    if(strcmp(n,"7")==0)return 7;
+    if(strcmp(n,"8")==0)return 8;
+    if(strcmp(n,"9")==0)return 9;
+    if(strcmp(n,"10")==0)return 10;
+    return -1;
+}
+
+char* LineListToCharArray(list*strlist)
+{
+    //int count=0;
+    char* line=calloc(sizeof(char),1000);
+
+    //strcat(line,)
+    node* current=strlist->head;
+    while(current!=NULL)
+    {
+        strcat(line,strdup(current->value));
+        strcat(line," ");
+        current=current->next;
+    }
+    strcat(line,"\n");
+    //free(line);
+    //return count;
+    return line;
+}
+
+void CharArrayToLineList(list*strlist,char* line)
+{
+    char c=line[0];
+    int i=0;
+    char * word= (char*)calloc(sizeof(char),100);
+    strcpy(word,"");
+    while(c!='\n')
+    {
+        if(c==' ')
+        {
+            push_back(strlist,strdup(word));
+            strcpy(word,"");            
+        }
+        else ConcatChar(c,word);
+        i++;
+        c=line[i];
+    }
+    free(word);
+
+}
 
 int only_write(char * file);
 int only_append(char * file, char buf[1000], int num);
@@ -588,66 +645,277 @@ int input_read(char * file);
 
 int HISTORY_CODE(node* argument)
 {
-    
 
-    return 0;
-}
-int AGAIN_CODE(node*argument)
-{
+    int std_in=dup(STDIN_FILENO);
+    int std_out=dup(STDOUT_FILENO);
+    if(!input_read(history_direction))
+    {
+        char file_contents[1000];
+        int num=read(STDIN_FILENO,file_contents,sizeof(file_contents));
+        printf("%s",file_contents);
+        //free(file_contents);
+        return 0;
+    }
+    dup2(std_in,STDIN_FILENO);
+    dup2(std_out,STDOUT_FILENO);
+    close(std_in);
+    close(std_out);
+    return 1;
 
 }
-int ReadHistory(list*history_lines,char* file_contents,int fc_size)
+
+int ReadHistory(list* history_lines,char* file_contents,int fc_size)
 {
     int count=0;
-    
-    for (int i = 0; i < fc_size; i++)
+    char* line=calloc(sizeof(char),1000);
+
+    for (int i = 0; i <= fc_size; i++)
     {
-        if(file_contents[i]=='\n')count++;
+        if(file_contents[i]=='\n')
+        {
+            ConcatChar(file_contents[i],line);
+            //strcat(line,"\n");
+            push_back(history_lines,strdup(line));
+            strcpy(line,"");
+            count++;
+            continue;
+        }
+        ConcatChar(file_contents[i],line);
+
     }
+    free(line);
     return count;
     
 }
-void SaveLine(char* strline)
+
+
+// bool RigthAgainArgument(char*argument)
+// {
+//     for (int i = 1; i < 11; i++)
+//     {
+//         char text[10];
+//         sprintf(text, "%d", i);   
+//         if(strcmp(argument,text)==0)
+//             return true;
+//     }
+//     return false;
+// }
+
+void EjecuteLine(list* line);
+
+
+void SaveLine(char* strline, list*strlist)
 {
-    return;
     int std_in=dup(STDIN_FILENO);
     int std_out=dup(STDOUT_FILENO);
 
     input_read(history_direction);
-    char file_contents[1000];
-    int num=read(STDIN_FILENO,file_contents,sizeof(file_contents));
+    char file_contents_history[1000];
+    int num_history=read(STDIN_FILENO,file_contents_history,sizeof(file_contents_history));
+////posiblemente aqui sea necesario resetear el stdin
+
+    // dup2(std_in,STDIN_FILENO);
+    // dup2(std_out,STDOUT_FILENO);
+
+
+    input_read(again_direction);
+    char file_contents_again[1000];
+    int num_again=read(STDIN_FILENO,file_contents_again,sizeof(file_contents_again));
+
 
     list*history_lines=init_list("init");
-    int count=ReadHistory(history_lines,file_contents,num);
-    push_back(history_lines,strline);
-    pop_front(history_lines);
-    if(count>=10)pop_front(history_lines);
-    
-    char* history_output=calloc(sizeof(char),1000);
+    list*again_lines=init_list("init");
 
-    while(count>0)
+    int count_history=ReadHistory(history_lines,file_contents_history,num_history);    
+    int count_again=ReadHistory(again_lines,file_contents_again,num_again);    
+
+    pop_front(history_lines);
+    pop_front(again_lines);
+
+
+    if(strcmp(history_lines->tail->value,strline)!=0)
+    {
+        push_back(history_lines,strdup(strline));  
+
+        char*tempstrline=LineListToCharArray(strlist);
+        push_back(again_lines,strdup(tempstrline));           
+
+        free(tempstrline);
+        count_history++;
+        count_again++;
+
+    }
+
+    if(count_history>=11) 
+    {
+        free(pop_front(history_lines));
+        free(pop_front(again_lines));
+        count_again--;
+        count_history--;
+    }
+    //strcat(strline,"\n");
+    
+
+    char* history_output=calloc(sizeof(char),1000);
+    char* again_output=calloc(sizeof(char),1000);
+
+    while(count_history>0)
     {
         //push_back(history_output)
         strcat(history_output,history_lines->head->value);
-        strcat(history_output,"\n");
-        count--;
+        strcat(again_output,again_lines->head->value);
+
+        //strcat(history_output,"\n");
+        free(pop_front(again_lines));
         free(pop_front(history_lines));
+
+        count_history--;
     }
     
 
-    FILE * fp = fopen(history_direction, "w");
-    fclose(fp);        
+    FILE * fp_history = fopen(history_direction, "w");
+    fclose(fp_history);        
     only_write(history_direction);
-    printf("%s",history_output);
+    printf("%s",strdup(history_output));
 
+    FILE * fp_again = fopen(again_direction, "w");
+    fclose(fp_again);        
+    only_write(again_direction);
+    printf("%s",strdup(again_output));
+
+    //free(file_contents);
     free(history_lines);
     free(history_output);
+
+
+    free(again_lines);
+    free(again_output);
 
     dup2(std_in,STDIN_FILENO);
     dup2(std_out,STDOUT_FILENO);
     close(std_in);
     close(std_out);
 }
+
+
+int AGAIN_CODE(node*argument)
+{
+     if(argument->next==NULL)
+    {
+        printf("empty again argument\n");
+        return 1;
+    }
+    Expression* index=argument->next->value;
+    int index_int=StrToInt(index->name);
+    did_again=true;
+
+    if(index_int==-1)
+    {   
+        printf("invalid again argument :%s\n",index->name);
+        return 1;
+    }
+
+     int std_in=dup(STDIN_FILENO);
+     int std_out=dup(STDOUT_FILENO);
+
+    input_read(again_direction);
+    char file_contents_again[1000];
+    int num_again=read(STDIN_FILENO,file_contents_again,sizeof(file_contents_again));
+
+    input_read(history_direction);
+    char file_contents_history[1000];
+    int num_history=read(STDIN_FILENO,file_contents_history,sizeof(file_contents_history));
+
+
+
+    list* history_lines = init_list("init");
+    list* again_lines = init_list("init");
+    int count=ReadHistory(history_lines,file_contents_history,num_history);    
+    count=ReadHistory(again_lines,file_contents_again,num_again);    
+
+    pop_front(history_lines);
+    pop_front(again_lines);
+
+
+    if(index_int>count)
+    {
+        printf("again's argument is bigger than history's commands saved: %d \n",count);
+        return 1;
+    }
+
+    node* current_again = again_lines->head;
+    node* current_history = history_lines->head;
+
+    for (int i = 1; i <index_int; i++)
+    {
+        current_again=current_again->next;
+        current_history=current_history->next;
+
+    }
+    
+    //input_read(again_direction);
+
+//Leer aqui el again.txt y llamar el metodo ejecuteline con una lista de string creada con lo que estta en again.txt
+
+    list* strlist=init_list("init");
+    CharArrayToLineList(strlist,strdup(current_again->value));
+    free(pop_front(strlist));
+
+    SaveLine(strdup(current_history->value),strlist);
+    if(strlist->head!=NULL) EjecuteLine(strlist);
+
+
+    // close(std_in);
+    // close(std_out);
+
+
+    
+    //char message[1000]=strdup()
+    
+    
+    //int n1= write(STDIN_FILENO, strdup(current->value), strlen(current->value));
+    
+    
+   // write(STDIN_FILENO, strdup(current->value), strlen(current->value));
+    
+    //write(STDOUT_FILENO, strdup(current->value), strlen(current->value));
+
+    //char buf[20];
+    
+
+
+
+    dup2(std_in,STDIN_FILENO);
+    dup2(std_out,STDOUT_FILENO);
+    close(std_in);
+    close(std_out);
+
+
+   // int n=read(STDIN_FILENO,buf,20);
+   // buf[n]='\0';
+    //printf("%s",buf);
+    // while(count>0)
+    // {
+    //     //push_back(history_output)
+    //     strcat(history_output,history_lines->head->value);
+    //     //strcat(history_output,"\n");
+    //     free(pop_front(history_lines));
+    //     count--;
+    // }
+
+    //FILE * fp = fopen(history_direction, "w");
+    //fclose(fp);        
+    //only_write(history_direction);
+
+    //free(file_contents);
+    free_list(again_lines);
+    return 0;
+    //dup2(std_in,STDIN_FILENO);
+    //dup2(std_out,STDOUT_FILENO);
+    //close(std_in);
+    //close(std_out);
+}
+
 
 #pragma endregion
 
@@ -656,6 +924,7 @@ void SaveLine(char* strline)
 
 
 #pragma region Ejecucion
+
 int only_write(char * file){
     int fd = open(file, O_WRONLY | O_CREAT);
 
@@ -947,23 +1216,128 @@ int EXIT_CODE(node* exp){
     return 0;
 }
 
+
+static list * var_list;// = init_list("neverusethisname");
+
+int PrintVariables(){
+
+    if(var_list->size == 1)
+        return 0;
+
+    node * current = var_list->head->next;
+    char * output = "";
+
+    while (current != NULL)
+    {
+        Expression * current_exp = current->value;
+        // if(strcmp(current_exp->name, "neverusethisname") == 0)
+        
+        strcat(output, current_exp->name);
+        strcat(output, " ");
+        char * c = getenv(current_exp->name);
+        if(c!= NULL)
+            strcat(output, c);
+        strcat(output, "\n");
+        current = current->next;
+    }
+    
+    printf("%s", output);
+    return 0;
+}
+
+int AddVar(char * key, char * value){
+    push_back(var_list, key);
+    return setenv(key, value, 1);
+}
+
+int ExecuteSetCharacter(node* exp , node * last){
+
+}
+
 int SET_CODE(node* exp){
+    //     char * a = strdup("a");
+    // char * b = strdup("`ls`");
+
+    // int result = setenv(a, b, 1);
+    
+    // printf("%s\n", getenv(a));
+
+
+    // int removed = unsetenv(a);
+    // int removed2 = unsetenv(a);
+
+    // printf("%d\n", result);
+    // char * c = getenv(a);
+    // if(c != NULL)
+    //     printf("%s\n", getenv(a));
+    // else
+    //     printf("NULL");
+
+    // return 0;
+
     // printf("Inside Run Method...\n");
     Expression * com_to_exec = exp->value;
     if(com_to_exec->operators != SET)
         return -1;
 
-    Expression * var_name = exp->next->value;
+    if(exp->next == NULL)
+        return PrintVariables();
+
+    Expression * var_name = exp->next->value; // me quedo con su .next(el nombre de la variable que viene a continuacion)
+
+    if(var_name->operators != ARGS){
+        return -1;
+    }
 
     node * last = exp->next->next;
     Expression * last_exp;
 
+    
     if(last != NULL)
         last_exp = last->value;
     else
+    {
         last_exp = NULL;
+    }
+
+    if(last_exp != NULL && last_exp->operators == SET_CHARACTER){
+        return ExecuteSetCharacter(exp ,last); // pasamos el comando set principal y el nodo a partir del cual se encontro el primer caracter de Set
+    }
+
+    // Buscando los argumentos para ir concatenandolos y asi formar el string final que corresponde a la variable
+
+    // list * temp_args = init_list(com->next);
 
     int count = 0;
+    while(last_exp != NULL && (last_exp->operators == ARGS )){// Con ARGS me refiero a los argumentos lo q aun no se bien como ponerle
+        count++;
+        last = last->next;
+        if(last != NULL)
+            last_exp = last->value;
+        else
+            last_exp = NULL;
+    }
+    // printf("Out of first while...\n");
+
+    // char *myargs[count+1];
+    //myargs[count+1] = NULL;
+    // myargs[0] = strdup(var_name->name);
+
+    char * str_value = "";
+
+    int temp = 0; // Para ir ubicando argumenta a argumento en el arreglo
+    node * current = exp->next->next;
+    while (temp < count)
+    {
+        Expression * current_com = current->value;
+        // myargs[temp] = strdup(current_com->name);
+        strcat(str_value, " ");
+        strcat(str_value, current_com->name);
+        temp++;
+        current=current->next;
+    }
+
+    AddVar(var_name->name, str_value);
     // while(last_com != NULL && (last_com->operators == ARGS || last_com->operators== ARCHIVE)){// Con ARGS me refiero a los argumentos lo q aun no se bien como ponerle
     //     count++;
     //     last = last->next;
@@ -978,12 +1352,62 @@ int SET_CODE(node* exp){
 
 int GET_CODE(node* exp)
 {
+    Expression * com_to_exec = exp->value;
+    if(com_to_exec->operators != GET)
+        return -1;
 
+    if(exp->next == NULL)
+        return 0;
+
+    Expression * next_exp = exp->next->value;
+    if(next_exp->operators != ARGS)
+        return -1;
+
+    char * output = getenv(next_exp->name);
+    if(output == NULL)
+        return -1;
+    
+    printf("%s", output);
+    return 0;
+}
+
+node * search_str_node(list * l, char * target){
+    node * current = l->head;
+
+    while(current != NULL)
+    {
+        Expression * current_exp = current->value;
+        if(strcmp(current_exp->name, target) == 0){
+            return current;
+        }
+        current = current->next;
+    }
+    return NULL;
 }
 
 int UNSET_CODE(node* exp)
 {
+    Expression * com_to_exec = exp->value;
+    if(com_to_exec->operators != UNSET)
+        return -1;
 
+    if(exp->next == NULL)
+        return 0;
+
+    Expression * next_exp = exp->next->value;
+    if(next_exp->operators != ARGS)
+        return -1;
+
+    int removed = unsetenv(next_exp->name);
+
+    node * temp = search_str_node(var_list, next_exp->name);
+    if(temp != NULL)
+        removeNode(var_list, temp);
+    // char * output = getenv(next_exp->name);
+    if(removed == -1)
+        return -1;
+    
+    return 0;
 }
 
 
@@ -997,8 +1421,8 @@ int (*testing[])(node*) = {
         HELP_CODE,
         CD_CODE,
         SET_CODE,
-        GET_CODE,
         UNSET_CODE,
+        GET_CODE,
         AGAIN_CODE,
         0
 	};
@@ -1851,7 +2275,9 @@ void ReadAndEjecuteLine(list* line,char* word, char c)//crea una lista de string
         free(word);
         pop_front(line);
         //print_list(line);
-        if(history)SaveLine(strline);
+
+        if(strcmp(line->head->value,"again")==0)history=false;
+        if(history) SaveLine(strline,line);
         if(line->head!=NULL) EjecuteLine(line);
 
         //free_list(line);
@@ -1875,9 +2301,14 @@ printf("\n");
     {
         // int b = EOF;
         // printf("%d", b);
-        
-        int std_in=dup(STDIN_FILENO);
-        int std_out=dup(STDOUT_FILENO);
+        int std_in;
+        int std_out;
+        //if(!did_again)
+        //{
+           std_in=dup(STDIN_FILENO);
+           std_out=dup(STDOUT_FILENO);        
+        //}
+
 
         char * word= (char*)calloc(sizeof(char),100);//word es cada una de las palabras que se mandan en un espacio de line
         strcpy(word,"");
@@ -1890,6 +2321,11 @@ printf("\n");
         if(pid_inicial==getpid()) printf("my-shell $ ");
         // fflush(stdin);
         
+        //write(STDOUT_FILENO,"lala",5);
+
+       // if()
+        //if(did_again)input_read("again.txt");
+        did_again=false;
 
         char c;
         c = getchar();  //cada uno de los char a leer de consola
@@ -1903,10 +2339,16 @@ printf("\n");
 
         // fflush(stdout);
 
-        dup2(std_in,STDIN_FILENO);
-        dup2(std_out,STDOUT_FILENO);
-        close(std_in);
-        close(std_out);
+        //if(!did_again) 
+        //{
+            dup2(std_in,STDIN_FILENO);
+            dup2(std_out,STDOUT_FILENO);
+            close(std_in);
+            close(std_out);
+        //}
+
+
+
         // close(STDIN_FILENO);
         // dup2(STDIN_FILENO, STDIN_FILENO);
         // char message[20];
@@ -1925,12 +2367,19 @@ printf("\n");
 
 }
 
+
 #pragma endregion
+
 int main(int argc, char const *argv[])
 {
+    var_list = init_list("neverusethisname");
     getcwd(history_direction,200);
-    strcat(history_direction,"/.history.txt");
+    strcpy(again_direction,history_direction);
+    //again_direction=strdup(history_direction);
+    strcat(history_direction,"/history.txt");
+    strcat(again_direction,"/again.txt");
 
+    did_again=false;
     //printf("%s",history_direction);
     signal(SIGINT,CtrlC);
 
@@ -1943,6 +2392,9 @@ int main(int argc, char const *argv[])
     //printf("PID inicial: %d\n",pid);
     //if(pid!=0) Shell();
     Shell();
+
+    // Limpiando lista de variables
+    free(var_list);
     return 0;
 }
 
