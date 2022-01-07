@@ -654,6 +654,13 @@ int HISTORY_CODE(node* argument)
         int num=read(STDIN_FILENO,file_contents,sizeof(file_contents));
         printf("%s",file_contents);
         //free(file_contents);
+
+
+        dup2(std_in,STDIN_FILENO);
+        dup2(std_out,STDOUT_FILENO);
+        close(std_in);
+        close(std_out);
+
         return 0;
     }
     dup2(std_in,STDIN_FILENO);
@@ -2050,6 +2057,12 @@ void EjecuteLine(list* line)
     while(line->head!=NULL)
     {
         temp=line->head->value;
+        if(strcmp(temp," ")==0)
+        {
+            free(pop_front(line));
+            continue;
+        }
+
         //push_back(exp_line,(Expression*)malloc(sizeof(Expression)));
         //current=current->next;
         //current->value->name=temp;
@@ -2275,10 +2288,12 @@ void ReadAndEjecuteLine(list* line,char* word, char c)//crea una lista de string
         free(word);
         pop_front(line);
         //print_list(line);
-
-        if(strcmp(line->head->value,"again")==0)history=false;
-        if(history) SaveLine(strline,line);
-        if(line->head!=NULL) EjecuteLine(line);
+        if(line->head!=NULL)
+        {
+            if(strcmp(line->head->value,"again")==0)history=false;
+            if(history) SaveLine(strline,line);
+            EjecuteLine(line);
+        }   
 
         //free_list(line);
 

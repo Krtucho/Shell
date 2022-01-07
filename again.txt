@@ -1,10 +1,10 @@
+ls ; ls 
+history 
 ls 
+history 
 ls 
 history 
 echo a a fs gf j gf d f g fgdf gdfg 
 history 
-ls 
-history 
-echo a a fs gf j gf d f g fgdf gdfg 
 ls ; ls 
 history 
