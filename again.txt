@@ -1,10 +1,10 @@
-& 
-&& 
-` 
-if if 
-if if 
-echo if 
-echo then 
-echo if 
-
-if if 
+set a 5 
+st 
+set 
+set a 5 
+get a 
+set a 38 99 8 a hola 
+set 
+set b 'echo a | cat ` 
+set b ` echo a | cat ` 
+set 

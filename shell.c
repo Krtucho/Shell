@@ -1061,6 +1061,10 @@ void Run(node * com){
 
                         int e = execvp(myargs[0], myargs);
                         //fclose(fp);
+                        if(e == -1){
+                            printf("%s: command not found\n", myargs[0]);
+                            exit(-1);
+                        }
                     }
                 }
             }
@@ -1100,6 +1104,10 @@ void Run(node * com){
 
         int e = execvp(myargs[0], myargs);
 
+        if(e == -1){
+            printf("%s: command not found\n", myargs[0]);
+            exit(-1);
+        }
         //int e = execvp(myargs[0], myargs);
         // fclose(stdin);
         // fclose(stdout);
@@ -1225,26 +1233,27 @@ int EXIT_CODE(node* exp){
 }
 
 
-static list * var_list;// = init_list("neverusethisname");
+list * var_list;// = init_list("neverusethisname");
 
 int PrintVariables(){
 
-    if(var_list->size == 1)
+    if(var_list->size <= 1)
         return 0;
 
     node * current = var_list->head->next;
-    char * output = "";
+    char * output = strdup("");
 
     while (current != NULL)
     {
-        Expression * current_exp = current->value;
+        char * current_exp = current->value;
         // if(strcmp(current_exp->name, "neverusethisname") == 0)
         
-        strcat(output, current_exp->name);
-        strcat(output, " ");
-        char * c = getenv(current_exp->name);
+        strcat(output, current_exp);
+        strcat(output, "=");
+        char * c = getenv(current_exp);
         if(c!= NULL)
             strcat(output, c);
+        // if(current != var_list->tail)
         strcat(output, "\n");
         current = current->next;
     }
@@ -1253,13 +1262,135 @@ int PrintVariables(){
     return 0;
 }
 
+int Execute(node * first_cmd, node * last_cmd);
+node * search_str_node(list * l, char * target){
+    node * current = l->head;
+
+    while(current != NULL)
+    {
+        char * current_exp = current->value;
+        if(strcmp(current_exp, target) == 0){
+            return current;
+        }
+        current = current->next;
+    }
+    return NULL;
+}
 int AddVar(char * key, char * value){
-    push_back(var_list, key);
+    if(search_str_node(var_list, key) == NULL){
+        push_back(var_list, key);
+    }
     return setenv(key, value, 1);
 }
 
-int ExecuteSetCharacter(node* exp , node * last){
+node * FindSetCharacter(node * beg){
+    node * current = beg;
+    
+    while (current!=NULL)
+    {
+        Expression * current_exp = current->value;
+        if(current_exp->operators == SET_CHARACTER){
+            return current;
+        }
+        current = current->next;
+    }
+    return NULL;
+}
 
+int ExecuteSetCharacter(char * key, node* beg , node * last){
+    node * end =  FindSetCharacter(last->next);
+
+    if(end == NULL)
+        return -1;
+
+
+    
+
+    FILE * fp = fopen("temp2", "w");
+    fclose(fp);
+    
+    // int std_in=dup(STDIN_FILENO);
+    // int std_out=dup(STDOUT_FILENO);
+
+    // dup2(std_in, STDIN_FILENO);
+    // dup2(std_out, STDOUT_FILENO);
+
+    only_write("temp2");
+    
+
+    Execute(last->next, end->previous);
+    int *status=0;
+    waitpid(-1, status, WNOHANG);
+
+    input_read("temp2");
+
+
+    char file_contents[1000];
+    int num=read(STDIN_FILENO,file_contents,sizeof(file_contents));
+    file_contents[num] = '\0';
+    printf("%d",num);
+    //fread(file_contents,sb.st_size,1,fp_in);
+
+    // exp->std_out=strdup(file_contents);
+    // printf("%s", file_contents);
+    //fclose(fp_in);
+
+
+    AddVar(key, file_contents);
+
+    // free(file_contents);
+    // close(std_in);
+    // close(std_out);
+
+    // if(remove("temp2")){
+    //     printf("ok");
+    // }
+
+    
+
+    return 0;
+
+    
+
+    // int fd[2];
+    // char buf[10000];
+    // int num;
+
+    // pipe(fd);
+    // int *status=0;
+    // int rc = fork();
+
+    // if(rc == 0)// Hijo
+    // {
+    //     close(fd[0]);
+    //     dup2(fd[1], STDOUT_FILENO);
+    //     close(fd[1]);
+
+    //     return Execute(last->next, end->previous);
+
+    // }
+    // else if(rc==-1){
+    //     // break;
+    //     printf("Error\n");
+    // }
+    // else{
+    //     close(fd[1]);
+    //     dup2(fd[0], STDIN_FILENO);
+
+    //     int num = read(fd[0], buf, sizeof(buf));
+    //     // printf("%d", num);
+    //     close(fd[0]);
+    //     AddVar(key, buf);
+
+    //     int child_pid = waitpid(-1, status, WNOHANG);
+    //     kill(rc, SIGKILL);
+
+
+    // }
+
+
+
+    
 }
 
 int SET_CODE(node* exp){
@@ -1294,7 +1425,7 @@ int SET_CODE(node* exp){
     Expression * var_name = exp->next->value; // me quedo con su .next(el nombre de la variable que viene a continuacion)
 
     if(var_name->operators != ARGS){
-        return -1;
+        return PrintVariables();
     }
 
     node * last = exp->next->next;
@@ -1309,7 +1440,9 @@ int SET_CODE(node* exp){
     }
 
     if(last_exp != NULL && last_exp->operators == SET_CHARACTER){
-        return ExecuteSetCharacter(exp ,last); // pasamos el comando set principal y el nodo a partir del cual se encontro el primer caracter de Set
+        int output = ExecuteSetCharacter(var_name->name, exp ,last); // pasamos el comando set principal y el nodo a partir del cual se encontro el primer caracter de Set
+        // if(remove("temp2")){}
+        return output;
     }
 
     // Buscando los argumentos para ir concatenandolos y asi formar el string final que corresponde a la variable
@@ -1331,7 +1464,7 @@ int SET_CODE(node* exp){
     //myargs[count+1] = NULL;
     // myargs[0] = strdup(var_name->name);
 
-    char * str_value = "";
+    char * str_value = strdup("");
 
     int temp = 0; // Para ir ubicando argumenta a argumento en el arreglo
     node * current = exp->next->next;
@@ -1339,7 +1472,8 @@ int SET_CODE(node* exp){
     {
         Expression * current_com = current->value;
         // myargs[temp] = strdup(current_com->name);
-        strcat(str_value, " ");
+        if(temp >0)
+            strcat(str_value, " ");
         strcat(str_value, current_com->name);
         temp++;
         current=current->next;
@@ -1375,23 +1509,11 @@ int GET_CODE(node* exp)
     if(output == NULL)
         return -1;
     
-    printf("%s", output);
+    printf("%s\n", output);
     return 0;
 }
 
-node * search_str_node(list * l, char * target){
-    node * current = l->head;
 
-    while(current != NULL)
-    {
-        Expression * current_exp = current->value;
-        if(strcmp(current_exp->name, target) == 0){
-            return current;
-        }
-        current = current->next;
-    }
-    return NULL;
-}
 
 int UNSET_CODE(node* exp)
 {
@@ -1437,20 +1559,24 @@ int (*testing[])(node*) = {
 
 node * Search_AND_OR(node * first_cmd, node * last_cmd){
 
-    bool is_if = false;
+    bool is_if, is_set_char = false;
     node * current = first_cmd;
     Expression * current_temp = current->value;
     while(current != last_cmd){
         current_temp = current->value;
         if(current_temp->operators == IF){
-            is_if = true;
+            is_if = is_set_char = true;
+            
             //continue;
             }
+        else if(current_temp->operators == SET_CHARACTER){
+            is_set_char = !is_set_char;
+        }
         else if(current_temp->operators == END){
-            is_if = false;
+            is_if = is_set_char = false;
             //continue;
             }
-        else if((current_temp->operators == AND || current_temp->operators == OR) && !is_if){
+        else if((current_temp->operators == AND || current_temp->operators == OR) && !is_if && !is_set_char){
             // free(current_temp);
             return current;
         }
@@ -1469,7 +1595,7 @@ node * Search_AND_OR(node * first_cmd, node * last_cmd){
 
 node * Search_PIPE(node * first_cmd, node * last_cmd){
     // printf("In Search PIPE method...\n");
-    bool is_if = false;
+    bool is_if, is_set_char = false;
     node * current = first_cmd;
     Expression * current_temp;// = current->value;
     while(current != last_cmd){
@@ -1480,11 +1606,14 @@ node * Search_PIPE(node * first_cmd, node * last_cmd){
             is_if = true;
             //continue;
             }
+        else if(current_temp->operators == SET_CHARACTER){
+            is_set_char = !is_set_char;
+        }
         else if(current_temp->operators == END){
-            is_if = false;
+            is_if = is_set_char = false;
             //continue;
             }
-        else if(current_temp->operators == PIPE && !is_if){
+        else if(current_temp->operators == PIPE && !is_if && !is_set_char){
             // free(current_temp);
             return current;
         }
@@ -1508,10 +1637,14 @@ node * Search_PIPE(node * first_cmd, node * last_cmd){
 node * Search_IF_THEN_ELSE(node * first_cmd, node * last_cmd, enum OPERATORS operator){
     // printf("I'm in IF THEN ELSE method...\n");
     node * current = first_cmd;
+    bool is_set_char = false;
     Expression * current_temp = current->value;
     while(current != NULL){
         current_temp = current->value;
-        if(current_temp->operators == operator){
+        if(current_temp->operators == SET_CHARACTER){
+            is_set_char = !is_set_char;
+        }
+        else if(current_temp->operators == operator && !is_set_char){
             return current;
         }
         current = current->next;
@@ -1973,17 +2106,20 @@ int Execute(node * first_cmd, node * last_cmd){
         node * END_node = Search_IF_THEN_ELSE(THEN_node, last_cmd, END);
         node * ELSE_node = Search_IF_THEN_ELSE(THEN_node, last_cmd, ELSE);
 
+        
         //Caso 1 para IF ELSE
         int IF_output = Execute(IF_ELSE_node->next, THEN_node->previous); // Aca se supone que se modifique la variable first_cmd, para que luego apunte hacia la instruccion siguiente al
         if(IF_output==0){ // Si devuelve True es xq tiene q ir hacia el THEN
             // Ejecuta el Then
+            if(ELSE_node == NULL)
+                ELSE_node = END_node;
             return Execute(THEN_node->next, ELSE_node->previous);
         }
         else if(ELSE_node != NULL){
             // Ejecuta el Else
             return Execute(ELSE_node->next, END_node->previous);
         }
-        return 0;
+        return IF_output;
 
         // Si encuentra un IF_ELSE entra en el ciclo
         // IF_ELSE_node = Search_IF_THEN_ELSE(first_cmd, last_cmd, IF_ELSE);
