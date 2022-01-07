@@ -356,15 +356,17 @@ bool RedirCaracter(char* c)//devuelve si es un caracter especial de los que pued
 
 }
 
-bool IfCommand(char* c)//devuelve si es una expresion del tipo if, else then o end
+bool IfCommand(int op)//devuelve si es una expresion del tipo if, else then o end
 {
-    if(strcmp(c,"if")==0||strcmp(c,"then")==0||strcmp(c,"else")==0||strcmp(c,"end")==0)return true;
+    //if(strcmp(c,"if")==0||strcmp(c,"then")==0||strcmp(c,"else")==0||strcmp(c,"end")==0)return true;
+    if(op==IF||op==ELSE||op==THEN||op==END)return true;
+
     return false;
 }
 
 bool PossibleArgumentExpression(int op)
 {
-    if(op == TRUE || op == FALSE || op == EXIT || op == CD || op == HISTORY || op == HELP || op == GET || op == UNSET || op == SET)
+    if(op == TRUE || op == FALSE || op == EXIT || op == CD || op == HISTORY || op == HELP || op == GET || op == UNSET || op == SET || op==IF)
     {
         return true;
     }
@@ -928,7 +930,6 @@ int AGAIN_CODE(node*argument)
 
 
 #pragma endregion
-
 
 #pragma region Ejecucion
 
@@ -2009,6 +2010,72 @@ int Execute(node * first_cmd, node * last_cmd){
 
 #pragma region Parser
 
+bool IfThenElseEndComprobation(int* operator,bool* did_if, bool* did_then, bool* did_else)
+{
+    //int operator=op[0];
+    if((*operator)==IF)
+    {
+        if((*did_if)==true)
+        {
+            (*operator)=ARGS;
+            return false;
+        }
+        (*did_if)=true;
+        return true;
+    }
+    if((*operator)==THEN)
+    {
+        if(!(*did_if))
+        {
+            (*operator)=ARGS;
+            return false;
+        }
+        if((*did_then))
+        {
+            (*operator)=ARGS;
+            return false;
+        }
+        (*did_then)=true;
+        return true;
+    }
+    if((*operator)==ELSE)
+    {
+        if(!(*did_if))
+        {
+            (*operator)=ARGS;
+            return false;
+        }
+        if(!(*did_then))
+        {
+            (*operator)=ARGS;
+            return false;            
+        }
+        if((*did_else))
+        {
+            (*operator)=ARGS;
+            return false;    
+        }
+        (*did_else)=true;
+        return true;
+    }
+    if((*operator)==END)
+    {
+        if(!(*did_if))
+        {
+            (*operator)=ARGS;
+            return false;
+        }
+        if(!(*did_then))
+        {
+            (*operator)=ARGS;
+            return false;            
+        }
+        (*did_if)=false;
+        (*did_then)=false;
+        (*did_else)=false;
+        return true;
+    }
+}
 
 void EjecuteLine(list* line)
 {
@@ -2017,6 +2084,11 @@ void EjecuteLine(list* line)
     bool archive=false;//indica si en este momento debo recibir un archivo
     bool special_caracter_last=false;//indica si la palabra anterior fue un caracter especial
     bool if_caracter_last=false;//indica si la expresion anterior es de tipo if, else then o end
+    bool open_set_command=false;//indica si ocurrio un comando ` pero no el segundo
+    bool did_if=false;//indica si ocurrio un if que fue tomado como if y no como argumento
+    bool did_then=false;//indica si ocurrio un then que fue tomado como then y no como argumento
+    bool did_else=false;//indica si ocurrio un else que fue tomado como else y no como argumento
+    //bool did_end=false;//indica si ocurrio un end que fue tomado como end y no como argumento
 
     Expression * exp1 = (Expression*)malloc(sizeof(Expression));//para guardar la primera expresion
 
@@ -2030,8 +2102,10 @@ void EjecuteLine(list* line)
     if(SpecialCaracters(temp)&& !RedirCaracter(temp))////cuando como primera palabra tenemos un caracter especial que no puede ocupar ese lugar
     {
         printf("syntax error near unexpected token `%s'\n",temp);
+        
         return;
     }
+
 
     exp1->name=strdup(temp);
     exp1->operators = GetOperator(temp);
@@ -2044,9 +2118,15 @@ void EjecuteLine(list* line)
 
     command=false;
     if(SpecialCaracters(temp)){command=true;special_caracter_last=true;}
-    if_caracter_last=IfCommand(temp);
+    //if_caracter_last=IfCommand(op);
+    if_caracter_last=strcmp(temp,"if")==0;
+    if(if_caracter_last && strcmp(temp,"if")!=0)
+    {
+        printf("syntax error near unexpected command: `%s'\n",temp);
+    }
     if(if_caracter_last)command=true;
     if(RedirCaracter(temp)) archive=true;
+    if(exp1->operators==IF){did_if=true;}
     //free(temp);//verificar si esta bien liberar aqui
 
     //node* current=exp_line->head;
@@ -2070,13 +2150,15 @@ void EjecuteLine(list* line)
         //Expression * exp = (Expression*)malloc(sizeof(Expression));//para crear cada expresion de la lista de expresiones
         char* name=strdup(temp);
 
-
         if(strcmp(";",name)==0)
         {
             free(pop_front(line));
             Execute(exp_line->head,exp_line->tail);
             if(line->head!=NULL) EjecuteLine(line);
             pid=getpid();
+            if(did_if && !did_then) {printf("syntax error near unexpected token: `%s'\n",name);return;}
+            //if(did_if && !did_end) {printf("syntax error near unexpected token: `%s'\n",name);return;}
+
             //EjecuteLine(line);
             return;
         }
@@ -2085,7 +2167,14 @@ void EjecuteLine(list* line)
         if(special_caracter_last && special_caracter_now){printf("syntax error near unexpected token `%s'\n",temp); return;}
         if(if_caracter_last && special_caracter_now && !RedirCaracter(temp)){printf("syntax error near unexpected token `%s'\n",temp); return;}
         if(special_caracter_last || if_caracter_last)command=true;
+        if(special_caracter_now && strcmp(temp,"`")==0) open_set_command=!open_set_command;
 
+        // if(special_caracter_now)
+        // {
+        //     if(did_if && did_then && !did_end) {printf("syntax error near unexpected token: `%s'\n",name);return;}
+        //     //if(did_if && !did_end) {printf("syntax error near unexpected token: `%s'\n",name);return;}
+
+        // }
         //exp->operators=GetOperator(temp);
         int op=GetOperator(temp);
         //if(exp->operators==SIMPLE_EXPRESSION)
@@ -2096,9 +2185,13 @@ void EjecuteLine(list* line)
             if(!command)op=ARGS;//Si no estamos esperando un comando entonces estamos en presencia de un argumento
             if(archive)op=ARCHIVE;//Si la expresion anterior es un caracter especial de redireccion shora estamos en presencia de un archivo
 
-
         }
-        if_caracter_last=IfCommand(temp);
+
+        if_caracter_last=IfCommand(op);
+        if(if_caracter_last)
+        {
+            if_caracter_last=IfThenElseEndComprobation(&op,&did_if,&did_then,&did_else);
+        }
         command=false;
         archive=false;
         if(RedirCaracter(temp)) archive=true;
@@ -2112,6 +2205,17 @@ void EjecuteLine(list* line)
 
     }
 
+    if(did_if)
+    {
+        if(!did_then) printf("command then not found\n");
+        else printf("command end not found\n");
+        
+        return;
+    }
+    if(open_set_command)
+    {
+        printf("token ` ` ' not found\n");
+    }
     ////Descomentar esto desde aqui
     // int _pid =fork();
     // if(_pid==0)

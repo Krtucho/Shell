@@ -1,10 +1,10 @@
-ls;ls
-history
-ls
-history
-ls
-history
-echo a a fs gf j gf  d f g           fgdf  gdfg
-history
-ls;ls
-history
+&
+&&
+`
+if if 
+if if
+echo if
+echo then
+echo if
+echo then
+if if
