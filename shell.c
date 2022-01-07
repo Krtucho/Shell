@@ -356,15 +356,17 @@ bool RedirCaracter(char* c)//devuelve si es un caracter especial de los que pued
 
 }
 
-bool IfCommand(char* c)//devuelve si es una expresion del tipo if, else then o end
+bool IfCommand(int op)//devuelve si es una expresion del tipo if, else then o end
 {
-    if(strcmp(c,"if")==0||strcmp(c,"then")==0||strcmp(c,"else")==0||strcmp(c,"end")==0)return true;
+    //if(strcmp(c,"if")==0||strcmp(c,"then")==0||strcmp(c,"else")==0||strcmp(c,"end")==0)return true;
+    if(op==IF||op==ELSE||op==THEN||op==END)return true;
+
     return false;
 }
 
 bool PossibleArgumentExpression(int op)
 {
-    if(op == TRUE || op == FALSE || op == EXIT || op == CD || op == HISTORY || op == HELP || op == GET || op == UNSET || op == SET)
+    if(op == TRUE || op == FALSE || op == EXIT || op == CD || op == HISTORY || op == HELP || op == GET || op == UNSET || op == SET || op==IF)
     {
         return true;
     }
@@ -378,8 +380,8 @@ bool PossibleArgumentExpression(int op)
 #pragma region Help
 void help_init()
 {
-    printf("Integrantes: Carlos Carret Miranda(C212)\n"
-                         "Lauren Guerra Hernandez(C212)\n"
+    printf("Integrantes: Carlos Carret Miranda(C-212)\n"
+                         "Lauren Guerra Hernandez(C-212)\n"
         "Funcionalidades:\n"
         "basic: funcionalidades básicas (1-8)  (3 puntos)\n"
         "multi-pipe: múltiples tuberías  (9)   (1 punto)\n"
@@ -577,10 +579,67 @@ void CtrlC()
         //kill(pid,SIGTERM);
     }
 }
-char history_direction[200];
 
 #pragma region History
 
+char history_direction[200];
+char again_direction[200];
+bool did_again;
+
+int StrToInt(char* n)
+{
+    if(strcmp(n,"1")==0)return 1;
+    if(strcmp(n,"2")==0)return 2;
+    if(strcmp(n,"3")==0)return 3;
+    if(strcmp(n,"4")==0)return 4;
+    if(strcmp(n,"5")==0)return 5;
+    if(strcmp(n,"6")==0)return 6;
+    if(strcmp(n,"7")==0)return 7;
+    if(strcmp(n,"8")==0)return 8;
+    if(strcmp(n,"9")==0)return 9;
+    if(strcmp(n,"10")==0)return 10;
+    return -1;
+}
+
+char* LineListToCharArray(list*strlist)
+{
+    //int count=0;
+    char* line=calloc(sizeof(char),1000);
+
+    //strcat(line,)
+    node* current=strlist->head;
+    while(current!=NULL)
+    {
+        strcat(line,strdup(current->value));
+        strcat(line," ");
+        current=current->next;
+    }
+    strcat(line,"\n");
+    //free(line);
+    //return count;
+    return line;
+}
+
+void CharArrayToLineList(list*strlist,char* line)
+{
+    char c=line[0];
+    int i=0;
+    char * word= (char*)calloc(sizeof(char),100);
+    strcpy(word,"");
+    while(c!='\n')
+    {
+        if(c==' ')
+        {
+            push_back(strlist,strdup(word));
+            strcpy(word,"");            
+        }
+        else ConcatChar(c,word);
+        i++;
+        c=line[i];
+    }
+    free(word);
+
+}
 
 int only_write(char * file);
 int only_append(char * file, char buf[1000], int num);
@@ -588,60 +647,158 @@ int input_read(char * file);
 
 int HISTORY_CODE(node* argument)
 {
-    
 
-    return 0;
-}
-int AGAIN_CODE(node*argument)
-{
+    int std_in=dup(STDIN_FILENO);
+    int std_out=dup(STDOUT_FILENO);
+    if(!input_read(history_direction))
+    {
+        char file_contents[1000];
+        int num=read(STDIN_FILENO,file_contents,sizeof(file_contents));
+        printf("%s",file_contents);
+        //free(file_contents);
+
+
+        dup2(std_in,STDIN_FILENO);
+        dup2(std_out,STDOUT_FILENO);
+        close(std_in);
+        close(std_out);
+
+        return 0;
+    }
+    dup2(std_in,STDIN_FILENO);
+    dup2(std_out,STDOUT_FILENO);
+    close(std_in);
+    close(std_out);
+    return 1;
 
 }
-int ReadHistory(list*history_lines,char* file_contents,int fc_size)
+
+int ReadHistory(list* history_lines,char* file_contents,int fc_size)
 {
     int count=0;
-    
-    for (int i = 0; i < fc_size; i++)
+    char* line=calloc(sizeof(char),1000);
+
+    for (int i = 0; i <= fc_size; i++)
     {
-        if(file_contents[i]=='\n')count++;
+        if(file_contents[i]=='\n')
+        {
+            ConcatChar(file_contents[i],line);
+            //strcat(line,"\n");
+            push_back(history_lines,strdup(line));
+            strcpy(line,"");
+            count++;
+            continue;
+        }
+        ConcatChar(file_contents[i],line);
+
     }
+    free(line);
     return count;
     
 }
-void SaveLine(char* strline)
+
+
+// bool RigthAgainArgument(char*argument)
+// {
+//     for (int i = 1; i < 11; i++)
+//     {
+//         char text[10];
+//         sprintf(text, "%d", i);   
+//         if(strcmp(argument,text)==0)
+//             return true;
+//     }
+//     return false;
+// }
+
+void EjecuteLine(list* line);
+
+
+void SaveLine(char* strline, list*strlist)
 {
-    return;
     int std_in=dup(STDIN_FILENO);
     int std_out=dup(STDOUT_FILENO);
 
     input_read(history_direction);
-    char file_contents[1000];
-    int num=read(STDIN_FILENO,file_contents,sizeof(file_contents));
+    char file_contents_history[1000];
+    int num_history=read(STDIN_FILENO,file_contents_history,sizeof(file_contents_history));
+////posiblemente aqui sea necesario resetear el stdin
+
+    // dup2(std_in,STDIN_FILENO);
+    // dup2(std_out,STDOUT_FILENO);
+
+
+    input_read(again_direction);
+    char file_contents_again[1000];
+    int num_again=read(STDIN_FILENO,file_contents_again,sizeof(file_contents_again));
+
 
     list*history_lines=init_list("init");
-    int count=ReadHistory(history_lines,file_contents,num);
-    push_back(history_lines,strline);
-    pop_front(history_lines);
-    if(count>=10)pop_front(history_lines);
-    
-    char* history_output=calloc(sizeof(char),1000);
+    list*again_lines=init_list("init");
 
-    while(count>0)
+    int count_history=ReadHistory(history_lines,file_contents_history,num_history);    
+    int count_again=ReadHistory(again_lines,file_contents_again,num_again);    
+
+    pop_front(history_lines);
+    pop_front(again_lines);
+
+
+    if(strcmp(history_lines->tail->value,strline)!=0)
+    {
+        push_back(history_lines,strdup(strline));  
+
+        char*tempstrline=LineListToCharArray(strlist);
+        push_back(again_lines,strdup(tempstrline));           
+
+        free(tempstrline);
+        count_history++;
+        count_again++;
+
+    }
+
+    if(count_history>=11) 
+    {
+        free(pop_front(history_lines));
+        free(pop_front(again_lines));
+        count_again--;
+        count_history--;
+    }
+    //strcat(strline,"\n");
+    
+
+    char* history_output=calloc(sizeof(char),1000);
+    char* again_output=calloc(sizeof(char),1000);
+
+    while(count_history>0)
     {
         //push_back(history_output)
         strcat(history_output,history_lines->head->value);
-        strcat(history_output,"\n");
-        count--;
+        strcat(again_output,again_lines->head->value);
+
+        //strcat(history_output,"\n");
+        free(pop_front(again_lines));
         free(pop_front(history_lines));
+
+        count_history--;
     }
     
 
-    FILE * fp = fopen(history_direction, "w");
-    fclose(fp);        
+    FILE * fp_history = fopen(history_direction, "w");
+    fclose(fp_history);        
     only_write(history_direction);
-    printf("%s",history_output);
+    printf("%s",strdup(history_output));
 
+    FILE * fp_again = fopen(again_direction, "w");
+    fclose(fp_again);        
+    only_write(again_direction);
+    printf("%s",strdup(again_output));
+
+    //free(file_contents);
     free(history_lines);
     free(history_output);
+
+
+    free(again_lines);
+    free(again_output);
 
     dup2(std_in,STDIN_FILENO);
     dup2(std_out,STDOUT_FILENO);
@@ -649,13 +806,133 @@ void SaveLine(char* strline)
     close(std_out);
 }
 
-#pragma endregion
+
+int AGAIN_CODE(node*argument)
+{
+     if(argument->next==NULL)
+    {
+        printf("empty again argument\n");
+        return 1;
+    }
+    Expression* index=argument->next->value;
+    int index_int=StrToInt(index->name);
+    did_again=true;
+
+    if(index_int==-1)
+    {   
+        printf("invalid again argument :%s\n",index->name);
+        return 1;
+    }
+
+     int std_in=dup(STDIN_FILENO);
+     int std_out=dup(STDOUT_FILENO);
+
+    input_read(again_direction);
+    char file_contents_again[1000];
+    int num_again=read(STDIN_FILENO,file_contents_again,sizeof(file_contents_again));
+
+    input_read(history_direction);
+    char file_contents_history[1000];
+    int num_history=read(STDIN_FILENO,file_contents_history,sizeof(file_contents_history));
+
+
+
+    list* history_lines = init_list("init");
+    list* again_lines = init_list("init");
+    int count=ReadHistory(history_lines,file_contents_history,num_history);    
+    count=ReadHistory(again_lines,file_contents_again,num_again);    
+
+    pop_front(history_lines);
+    pop_front(again_lines);
+
+
+    if(index_int>count)
+    {
+        printf("again's argument is bigger than history's commands saved: %d \n",count);
+        return 1;
+    }
+
+    node* current_again = again_lines->head;
+    node* current_history = history_lines->head;
+
+    for (int i = 1; i <index_int; i++)
+    {
+        current_again=current_again->next;
+        current_history=current_history->next;
+
+    }
+    
+    //input_read(again_direction);
+
+//Leer aqui el again.txt y llamar el metodo ejecuteline con una lista de string creada con lo que estta en again.txt
+
+    list* strlist=init_list("init");
+    CharArrayToLineList(strlist,strdup(current_again->value));
+    free(pop_front(strlist));
+
+    SaveLine(strdup(current_history->value),strlist);
+    if(strlist->head!=NULL) EjecuteLine(strlist);
+
+
+    // close(std_in);
+    // close(std_out);
+
+
+    
+    //char message[1000]=strdup()
+    
+    
+    //int n1= write(STDIN_FILENO, strdup(current->value), strlen(current->value));
+    
+    
+   // write(STDIN_FILENO, strdup(current->value), strlen(current->value));
+    
+    //write(STDOUT_FILENO, strdup(current->value), strlen(current->value));
+
+    //char buf[20];
+    
+
+
+
+    dup2(std_in,STDIN_FILENO);
+    dup2(std_out,STDOUT_FILENO);
+    close(std_in);
+    close(std_out);
+
+
+   // int n=read(STDIN_FILENO,buf,20);
+   // buf[n]='\0';
+    //printf("%s",buf);
+    // while(count>0)
+    // {
+    //     //push_back(history_output)
+    //     strcat(history_output,history_lines->head->value);
+    //     //strcat(history_output,"\n");
+    //     free(pop_front(history_lines));
+    //     count--;
+    // }
+
+    //FILE * fp = fopen(history_direction, "w");
+    //fclose(fp);        
+    //only_write(history_direction);
+
+    //free(file_contents);
+    free_list(again_lines);
+    return 0;
+    //dup2(std_in,STDIN_FILENO);
+    //dup2(std_out,STDOUT_FILENO);
+    //close(std_in);
+    //close(std_out);
+}
 
 
 #pragma endregion
 
+
+#pragma endregion
 
 #pragma region Ejecucion
+
 int only_write(char * file){
     int fd = open(file, O_WRONLY | O_CREAT);
 
@@ -784,6 +1061,10 @@ void Run(node * com){
 
                         int e = execvp(myargs[0], myargs);
                         //fclose(fp);
+                        if(e == -1){
+                            printf("%s: command not found\n", myargs[0]);
+                            exit(-1);
+                        }
                     }
                 }
             }
@@ -951,6 +1232,7 @@ int EXIT_CODE(node* exp){
     return 0;
 }
 
+
 list * var_list;// = init_list("neverusethisname");
 
 int PrintVariables(){
@@ -971,8 +1253,8 @@ int PrintVariables(){
         char * c = getenv(current_exp);
         if(c!= NULL)
             strcat(output, c);
-        if(current != var_list->tail)
-            strcat(output, "\n");
+        // if(current != var_list->tail)
+        strcat(output, "\n");
         current = current->next;
     }
     
@@ -1000,18 +1282,6 @@ int AddVar(char * key, char * value){
     }
     return setenv(key, value, 1);
 }
-// int AddVarArray(char * key, char * value, int num){
-//     int count = 0;
-//     char * result = strdup("");
-
-//     while (count < num)
-//     {
-//         strcat(result, value[count]);
-//     }
-    
-//     push_back(var_list, key);
-//     return setenv(key, result, 1);
-// }
 
 node * FindSetCharacter(node * beg){
     node * current = beg;
@@ -1122,232 +1392,6 @@ int ExecuteSetCharacter(char * key, node* beg , node * last){
 
     
 }
-
-/*
-int ExecuteSetCharacter(char * key, node* beg , node * last){
-    node * end =  FindSetCharacter(last->next);
-
-    if(end == NULL)
-        return -1;
-
-
-    
-
-    // FILE * fp = fopen("temp2", "w");
-    // fclose(fp);
-    
-
-    // only_write("temp2");
-    int std_in=dup(STDIN_FILENO);
-    int std_out=dup(STDOUT_FILENO);
-    
-    
-     int rc = fork();
-
-    if(rc == 0)// Hijo
-    {
-        // close(fd[0]);
-        // dup2(fd[1], STDOUT_FILENO);
-        // close(fd[1]);
-
-        Execute(last->next, end->previous);
-
-    }
-    else if(rc==-1){
-        // break;
-        printf("Error\n");
-    }
-    else{
-        // close(fd[1]);
-        // dup2(fd[0], STDIN_FILENO);
-
-        // int num = read(fd[0], buf, sizeof(buf));
-        // // printf("%d", num);
-        // close(fd[0]);
-
-        int *status=0;
-        int child_pid = waitpid(rc, status, WNOHANG);
-        kill(rc, SIGKILL);
-
-
-        char file_contents[1000];
-        int num=read(STDOUT_FILENO,file_contents,sizeof(file_contents));
-        file_contents[num] = '\0';
-
-
-
-        printf("%s", file_contents);
-        AddVar(key, file_contents);
-        // AddVar(key, buf);
-
-       
-
-        dup2(std_in, STDIN_FILENO);
-        dup2(std_out, STDOUT_FILENO);
-        close(std_in);
-        close(std_out);
-    }
-
-
-    // Execute(last->next, end->previous);
-    // int *status=0;
-    // waitpid(-1, status, WNOHANG);
-
-    // input_read("temp2");
-
-
-    
-    //fread(file_contents,sb.st_size,1,fp_in);
-
-    // exp->std_out=strdup(file_contents);
-    //fclose(fp_in);
-
-    // if(remove("temp2")){}
-
-
-   
-
-    // char file_contents[1000];
-    // int num=read(STDOUT_FILENO,file_contents,sizeof(file_contents));
-    // file_contents[num] = '\0';
-
-    // printf("%s", file_contents);
-    // AddVar(key, file_contents);
-
-    // dup2(std_in, STDIN_FILENO);
-    // dup2(std_out, STDOUT_FILENO);
-
-    
-
-    return 0;
-
-    
-
-    // int fd[2];
-    // char buf[10000];
-    // int num;
-
-    // pipe(fd);
-    // int *status=0;
-    // int rc = fork();
-
-    // if(rc == 0)// Hijo
-    // {
-    //     close(fd[0]);
-    //     dup2(fd[1], STDOUT_FILENO);
-    //     close(fd[1]);
-
-    //     return Execute(last->next, end->previous);
-
-    // }
-    // else if(rc==-1){
-    //     // break;
-    //     printf("Error\n");
-    // }
-    // else{
-    //     close(fd[1]);
-    //     dup2(fd[0], STDIN_FILENO);
-
-    //     int num = read(fd[0], buf, sizeof(buf));
-    //     // printf("%d", num);
-    //     close(fd[0]);
-    //     AddVar(key, buf);
-
-    //     int child_pid = waitpid(-1, status, WNOHANG);
-    //     kill(rc, SIGKILL);
-
-
-    // }
-
-
-
-    
-}
-*/
-/*
-int ExecuteSetCharacter(char * key, node* beg , node * last){
-    node * end =  FindSetCharacter(last->next);
-
-    if(end == NULL)
-        return -1;
-
-
-    int std_in=dup(STDIN_FILENO);
-    int std_out=dup(STDOUT_FILENO);
-
-    // FILE * fp = fopen("temp2", "w");
-    // fclose(fp);
-    // only_write("temp2");
-
-    // Execute(last->next, end->previous);
-
-    // input_read("temp2");
-
-
-    // char file_contents[1000];
-    // int num=read(STDIN_FILENO,file_contents,sizeof(file_contents));
-
-    //fread(file_contents,sb.st_size,1,fp_in);
-
-    // exp->std_out=strdup(file_contents);
-    // printf("%s", file_contents);
-    //fclose(fp_in);
-
-    // if(remove("temp2")){}
-
-    // AddVar(key, file_contents);
-
-    
-    
-
-    int fd[2];
-    char buf[10000];
-    int num;
-
-    pipe(fd);
-    int *status=0;
-    int rc = fork();
-
-    if(rc == 0)// Hijo
-    {
-        close(fd[0]);
-        dup2(fd[1], STDOUT_FILENO);
-        close(fd[1]);
-
-        Execute(last->next, end->previous);
-
-    }
-    else if(rc==-1){
-        // break;
-        printf("Error\n");
-    }
-    else{
-        close(fd[1]);
-        dup2(fd[0], STDIN_FILENO);
-
-        int num = read(fd[0], buf, sizeof(buf));
-        // printf("%d", num);
-        close(fd[0]);
-        AddVar(key, buf);
-
-        int child_pid = waitpid(-1, status, WNOHANG);
-        kill(rc, SIGKILL);
-
-        dup2(std_in, STDIN_FILENO);
-        dup2(std_out, STDOUT_FILENO);
-        close(std_in);
-        close(std_out);
-
-    }
-
-    
-
-    return 0;
-
-
-    
-}
-*/
 
 int SET_CODE(node* exp){
     //     char * a = strdup("a");
@@ -1465,7 +1509,7 @@ int GET_CODE(node* exp)
     if(output == NULL)
         return -1;
     
-    printf("%s", output);
+    printf("%s\n", output);
     return 0;
 }
 
@@ -2102,6 +2146,72 @@ int Execute(node * first_cmd, node * last_cmd){
 
 #pragma region Parser
 
+bool IfThenElseEndComprobation(int* operator,bool* did_if, bool* did_then, bool* did_else)
+{
+    //int operator=op[0];
+    if((*operator)==IF)
+    {
+        if((*did_if)==true)
+        {
+            (*operator)=ARGS;
+            return false;
+        }
+        (*did_if)=true;
+        return true;
+    }
+    if((*operator)==THEN)
+    {
+        if(!(*did_if))
+        {
+            (*operator)=ARGS;
+            return false;
+        }
+        if((*did_then))
+        {
+            (*operator)=ARGS;
+            return false;
+        }
+        (*did_then)=true;
+        return true;
+    }
+    if((*operator)==ELSE)
+    {
+        if(!(*did_if))
+        {
+            (*operator)=ARGS;
+            return false;
+        }
+        if(!(*did_then))
+        {
+            (*operator)=ARGS;
+            return false;            
+        }
+        if((*did_else))
+        {
+            (*operator)=ARGS;
+            return false;    
+        }
+        (*did_else)=true;
+        return true;
+    }
+    if((*operator)==END)
+    {
+        if(!(*did_if))
+        {
+            (*operator)=ARGS;
+            return false;
+        }
+        if(!(*did_then))
+        {
+            (*operator)=ARGS;
+            return false;            
+        }
+        (*did_if)=false;
+        (*did_then)=false;
+        (*did_else)=false;
+        return true;
+    }
+}
 
 void EjecuteLine(list* line)
 {
@@ -2110,6 +2220,11 @@ void EjecuteLine(list* line)
     bool archive=false;//indica si en este momento debo recibir un archivo
     bool special_caracter_last=false;//indica si la palabra anterior fue un caracter especial
     bool if_caracter_last=false;//indica si la expresion anterior es de tipo if, else then o end
+    bool open_set_command=false;//indica si ocurrio un comando ` pero no el segundo
+    bool did_if=false;//indica si ocurrio un if que fue tomado como if y no como argumento
+    bool did_then=false;//indica si ocurrio un then que fue tomado como then y no como argumento
+    bool did_else=false;//indica si ocurrio un else que fue tomado como else y no como argumento
+    //bool did_end=false;//indica si ocurrio un end que fue tomado como end y no como argumento
 
     Expression * exp1 = (Expression*)malloc(sizeof(Expression));//para guardar la primera expresion
 
@@ -2123,8 +2238,10 @@ void EjecuteLine(list* line)
     if(SpecialCaracters(temp)&& !RedirCaracter(temp))////cuando como primera palabra tenemos un caracter especial que no puede ocupar ese lugar
     {
         printf("syntax error near unexpected token `%s'\n",temp);
+        
         return;
     }
+
 
     exp1->name=strdup(temp);
     exp1->operators = GetOperator(temp);
@@ -2137,9 +2254,15 @@ void EjecuteLine(list* line)
 
     command=false;
     if(SpecialCaracters(temp)){command=true;special_caracter_last=true;}
-    if_caracter_last=IfCommand(temp);
+    //if_caracter_last=IfCommand(op);
+    if_caracter_last=strcmp(temp,"if")==0;
+    if(if_caracter_last && strcmp(temp,"if")!=0)
+    {
+        printf("syntax error near unexpected command: `%s'\n",temp);
+    }
     if(if_caracter_last)command=true;
     if(RedirCaracter(temp)) archive=true;
+    if(exp1->operators==IF){did_if=true;}
     //free(temp);//verificar si esta bien liberar aqui
 
     //node* current=exp_line->head;
@@ -2150,6 +2273,12 @@ void EjecuteLine(list* line)
     while(line->head!=NULL)
     {
         temp=line->head->value;
+        if(strcmp(temp," ")==0)
+        {
+            free(pop_front(line));
+            continue;
+        }
+
         //push_back(exp_line,(Expression*)malloc(sizeof(Expression)));
         //current=current->next;
         //current->value->name=temp;
@@ -2157,13 +2286,15 @@ void EjecuteLine(list* line)
         //Expression * exp = (Expression*)malloc(sizeof(Expression));//para crear cada expresion de la lista de expresiones
         char* name=strdup(temp);
 
-
         if(strcmp(";",name)==0)
         {
             free(pop_front(line));
             Execute(exp_line->head,exp_line->tail);
             if(line->head!=NULL) EjecuteLine(line);
             pid=getpid();
+            if(did_if && !did_then) {printf("syntax error near unexpected token: `%s'\n",name);return;}
+            //if(did_if && !did_end) {printf("syntax error near unexpected token: `%s'\n",name);return;}
+
             //EjecuteLine(line);
             return;
         }
@@ -2172,7 +2303,14 @@ void EjecuteLine(list* line)
         if(special_caracter_last && special_caracter_now){printf("syntax error near unexpected token `%s'\n",temp); return;}
         if(if_caracter_last && special_caracter_now && !RedirCaracter(temp)){printf("syntax error near unexpected token `%s'\n",temp); return;}
         if(special_caracter_last || if_caracter_last)command=true;
+        if(special_caracter_now && strcmp(temp,"`")==0) open_set_command=!open_set_command;
 
+        // if(special_caracter_now)
+        // {
+        //     if(did_if && did_then && !did_end) {printf("syntax error near unexpected token: `%s'\n",name);return;}
+        //     //if(did_if && !did_end) {printf("syntax error near unexpected token: `%s'\n",name);return;}
+
+        // }
         //exp->operators=GetOperator(temp);
         int op=GetOperator(temp);
         //if(exp->operators==SIMPLE_EXPRESSION)
@@ -2183,9 +2321,13 @@ void EjecuteLine(list* line)
             if(!command)op=ARGS;//Si no estamos esperando un comando entonces estamos en presencia de un argumento
             if(archive)op=ARCHIVE;//Si la expresion anterior es un caracter especial de redireccion shora estamos en presencia de un archivo
 
-
         }
-        if_caracter_last=IfCommand(temp);
+
+        if_caracter_last=IfCommand(op);
+        if(if_caracter_last)
+        {
+            if_caracter_last=IfThenElseEndComprobation(&op,&did_if,&did_then,&did_else);
+        }
         command=false;
         archive=false;
         if(RedirCaracter(temp)) archive=true;
@@ -2199,6 +2341,17 @@ void EjecuteLine(list* line)
 
     }
 
+    if(did_if)
+    {
+        if(!did_then) printf("command then not found\n");
+        else printf("command end not found\n");
+        
+        return;
+    }
+    if(open_set_command)
+    {
+        printf("token ` ` ' not found\n");
+    }
     ////Descomentar esto desde aqui
     // int _pid =fork();
     // if(_pid==0)
@@ -2375,8 +2528,12 @@ void ReadAndEjecuteLine(list* line,char* word, char c)//crea una lista de string
         free(word);
         pop_front(line);
         //print_list(line);
-        if(history)SaveLine(strline);
-        if(line->head!=NULL) EjecuteLine(line);
+        if(line->head!=NULL)
+        {
+            if(strcmp(line->head->value,"again")==0)history=false;
+            if(history) SaveLine(strline,line);
+            EjecuteLine(line);
+        }   
 
         //free_list(line);
 
@@ -2399,11 +2556,16 @@ printf("\n");
     {
         // int b = EOF;
         // printf("%d", b);
-        
-        int std_in=dup(STDIN_FILENO);
-        int std_out=dup(STDOUT_FILENO);
+        int std_in;
+        int std_out;
+        //if(!did_again)
+        //{
+           std_in=dup(STDIN_FILENO);
+           std_out=dup(STDOUT_FILENO);        
+        //}
 
-        char * word= (char*)calloc(sizeof(char),1000);//word es cada una de las palabras que se mandan en un espacio de line
+
+        char * word= (char*)calloc(sizeof(char),100);//word es cada una de las palabras que se mandan en un espacio de line
         strcpy(word,"");
 
         list* line=init_list("init"); //line es la linked list que guarda los comandos argumentos y caracteres especiales
@@ -2414,6 +2576,11 @@ printf("\n");
         if(pid_inicial==getpid()) printf("my-shell $ ");
         // fflush(stdin);
         
+        //write(STDOUT_FILENO,"lala",5);
+
+       // if()
+        //if(did_again)input_read("again.txt");
+        did_again=false;
 
         char c;
         c = getchar();  //cada uno de los char a leer de consola
@@ -2427,10 +2594,16 @@ printf("\n");
 
         // fflush(stdout);
 
-        dup2(std_in,STDIN_FILENO);
-        dup2(std_out,STDOUT_FILENO);
-        close(std_in);
-        close(std_out);
+        //if(!did_again) 
+        //{
+            dup2(std_in,STDIN_FILENO);
+            dup2(std_out,STDOUT_FILENO);
+            close(std_in);
+            close(std_out);
+        //}
+
+
+
         // close(STDIN_FILENO);
         // dup2(STDIN_FILENO, STDIN_FILENO);
         // char message[20];
@@ -2449,13 +2622,19 @@ printf("\n");
 
 }
 
+
 #pragma endregion
+
 int main(int argc, char const *argv[])
 {
     var_list = init_list("neverusethisname");
     getcwd(history_direction,200);
-    strcat(history_direction,"/.history.txt");
+    strcpy(again_direction,history_direction);
+    //again_direction=strdup(history_direction);
+    strcat(history_direction,"/history.txt");
+    strcat(again_direction,"/again.txt");
 
+    did_again=false;
     //printf("%s",history_direction);
     signal(SIGINT,CtrlC);
 
