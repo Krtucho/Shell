@@ -435,10 +435,10 @@ void help_basic()
     "es imprimir `my-shell $` en la consola para luego con el getchar() leer del stdin de la misma.\n"
 	"Funcionalidad 2: Los comandos se ejecutan correctamente ya sean propios del sistema o pertenezcan"
     "a nuestro build-in.\n"
-    "Funcionalidad 3: El comando cd cambia el directorio ,empleando la función chdir, seg'un el path que recibe como argumento."
+    "Funcionalidad 3: El comando cd cambia el directorio ,empleando la función chdir, seg'un el path que recibe como argumento.\n"
 
-//    "Funcionalidad 4: > >> <"
-//    "Funcionalidad 5: |"
+    "Funcionalidad 4: Los operadores de redireccion fueron implementados comenzando con el operador <, luego ejecutando el comando al cual se le entra el contenido del algun archivo, luego, vamos a ejecutar la funcionalidad de los operadores > y >>, guardando o sobreescribiendo el contenido de algunos archivos\n"
+    "Funcionalidad 5: Los pipes fueron implementados utilizando un arreglo de de dos posiciones y el metodo pipe() para redirigir la entrada y la salida stdin, stdout, se ejecutan haciendo un fork y ejecutando con execvp en caso de ser necesario la parte izquierda y luego hacemos otro fork en un llamado recursivo a la parte derecha\n"
     "Funcionalidad 6: Luego de terminar la ejecuci'on de una l'inea de comandos se vuelve al m'etodo shell"
     "donde se vuelve a imprimir `my-shell $` y se puede entrar otra l'inea de comando para ser ejecutada \n"
     "Funcionalidad 7: Se separan los comandos con un espacio, mas al tambi'en estar implementada la funcionalidad"
@@ -469,7 +469,8 @@ void help_spaces()
 
 void help_multipipe()
 {
-
+    printf("\nLos pipes fueron implementados utilizando un arreglo de de dos posiciones y el metodo pipe() para redirigir la entrada y la salida stdin, stdout, se ejecutan haciendo un fork y ejecutando con execvp en caso de ser necesario la parte izquierda y luego hacemos otro fork en un llamado recursivo a la parte derecha"
+    "Luego de llamar recursivo a la parte derecha, verificamos si existe otro pipe y en caso de existir volvemos a llamar recursivamente a la parte derecha y hacemos un fork a la parte izquierda del nuevo pipe encontrado para ejecutar su comando. \n ");
 }
 
 void help_controlc()
