@@ -266,6 +266,7 @@ typedef struct Expression // Struct creado para guardar todos los tipos de token
 #pragma endregion
 
 #pragma region KeyValuePair
+
 typedef struct keyvaluepair{ // Struct creado para guardar todos los pares de llave-valor que se guardaran en la lista de variables con sus valores para implementar el get set
     void * key; // Nombre de la variable
     void * value; // Valor guardado en la variable
@@ -410,8 +411,8 @@ void help_init()
         "basic: funcionalidades básicas (1-8)  (3 puntos)\n"
         "multi-pipe: múltiples tuberías  (9)   (1 punto)\n"
         "spaces: múltiples espacios   (11)    (0.5 puntos)\n"
-        //"history: trabajar con el historial de comandos f(12)    (0.5 puntos)\n"
-        //"ctrl+c: capturar y enviar señales a procesos (13) (0.5 puntos)\n"
+        "history: trabajar con el historial de comandos f(12)    (0.5 puntos)\n"
+        "ctrl+c: capturar y enviar señales a procesos (13) (0.5 puntos)\n"
         "if:funcionalidad 15, 1punto"
         "chain: concatenación de comandos con ; y operaciones booleanas (14) (0.5 puntos)\n"
         "help: ayuda del shell (17) (1 punto)"
@@ -419,8 +420,8 @@ void help_init()
         "Comandos built-in:\n"
         "cd: cambia de directorios\n"
         "exit: termina el shell\n"
-        //"history: muestra los 10 últimos comandos ejecutados\n"
-        //"again: se sutituye por un comando seleccionado dentro del historial\n"
+        "history: muestra los 10 últimos comandos ejecutados\n"
+        "again: se sutituye por un comando seleccionado dentro del historial\n"
         "true: retorna 1\n"
         "false: retorna 0\n"
         "help: muestra esta ayuda\n\n"
@@ -452,16 +453,17 @@ void help_chain()
 {
 	printf("\n Los operadores &&, ||, ; concatenan comandos, en el caso del ; vamos leyendo cada linea, cuando"
     " nos encontramos con uno de estos enviamos esta l'inea a ejecutarse y seguimos leyendo esta l'inea de la consola y "
-    "cuando finalice la mandamos a ejecutar aparte, a la hora de ejecutar una l'inea tomamos como caracteres de mayor"
+    "cuando finalice la mandamos a ejecutar aparte, a la hora de ejecutar una línea tomamos como caracteres de mayor"
     "prioridad a && y ||  , luego buscamos los pipes (command1|command2) y luego buscamos los if then else y end, por 'ultimo resolvemos"
     "las expresiones simples, del tipo command1 argumento < archivo. \n\n");
 }
 
 void help_spaces()
 {
-	printf("\n Entre comandos y argumentos puede haber cualquier cantidad de espacios >=1 \n. Ejemplo:\n"
+	printf("\n Entre comandos y argumentos puede haber cualquier cantidad de espacios >=1 \n. Esto se implemt'o a la hora de ir tomando las instrucciones "
+    "de la consola con el getchar() si tenemos un espacio tal que la palabra que estamos formando esta vac'ia a'un, este espacio se obvia. Ejemplo:\n"
     "`com1 arg1` y `com1     arg1` \n y entre comandos y operadores puede haber igualmente cualquier cantidad "
-    "de espacios. \n Ejemplo: \n ");
+    "de espacios. \n Ejemplo: com1 arg 1||com2 y com1               &&com2 arg1.\n ");
 
 }
 
@@ -472,10 +474,15 @@ void help_multipipe()
 
 void help_controlc()
 {
-    printf("\n  \n ");
+    printf("\n El Ctrl+C esta implementado utilizando la señal SINGINT que se recibe al inicio del método main(), la primera señal recibida no se toma"
+    ", esto se implement'o con un bool y si ya no estamos en la primera sennal se mata la ejecuci'on con SINGKILL. Hay un pequeño desperfecto a la hora de "
+    "dar Ctrl+C cuand no se est'a ejecutando ning'un comando este Ctrl+C se escribe en la consola y no sale un nuevo my shell $. \n ");
 }
 
+void help_history()
+{
 
+}
 
 int HELP_CODE(node* argument)
 {
@@ -499,10 +506,10 @@ int HELP_CODE(node* argument)
         help_chain();    return 0;
 
     }
-    // else if(strcmp("history",argument)==0)
-    // {
-    //     help_history();
-    // }
+    else if(strcmp("history",argument)==0)
+    {
+        help_history();
+    }
 
     else if(strcmp("spaces",next->name)==0)
     {
@@ -1693,7 +1700,6 @@ int Execute(node * first_cmd, node * last_cmd){
 
 bool IfThenElseEndComprobation(int* operator,bool* did_if, bool* did_then, bool* did_else)
 {
-    //int operator=op[0];
     if((*operator)==IF)
     {
         if((*did_if)==true)
@@ -1769,17 +1775,12 @@ void EjecuteLine(list* line)
     bool did_if=false;//indica si ocurrio un if que fue tomado como if y no como argumento
     bool did_then=false;//indica si ocurrio un then que fue tomado como then y no como argumento
     bool did_else=false;//indica si ocurrio un else que fue tomado como else y no como argumento
-    //bool did_end=false;//indica si ocurrio un end que fue tomado como end y no como argumento
 
     Expression * exp1 = (Expression*)malloc(sizeof(Expression));//para guardar la primera expresion
 
     char* temp = pop_front(line)->value; //guarda temporalmente el primer valor de la lista de string
     if(strcmp("^C",temp)==0)return;
 
-    // if(temp==';')
-    // {
-    //     printf("syntax error near unexpected token `%s'\n",temp);
-    // }
     if(SpecialCaracters(temp)&& !RedirCaracter(temp))////cuando como primera palabra tenemos un caracter especial que no puede ocupar ese lugar
     {
         printf("syntax error near unexpected token `%s'\n",temp);
@@ -1792,14 +1793,10 @@ void EjecuteLine(list* line)
     exp1->operators = GetOperator(temp);
 
     list* exp_line=init_list(exp1); //linea de expresiones clasificadas
-    //printf("%s:%d\n",exp1->name,exp1->operators);
 
-    //free(exp1);///verificar si esta bien liberar aqui
-    //printf("%s:%d",exp_line->head->value->name,exp1->operators);
 
     command=false;
     if(SpecialCaracters(temp)){command=true;special_caracter_last=true;}
-    //if_caracter_last=IfCommand(op);
     if_caracter_last=strcmp(temp,"if")==0;
     if(if_caracter_last && strcmp(temp,"if")!=0)
     {
@@ -1808,11 +1805,7 @@ void EjecuteLine(list* line)
     if(if_caracter_last)command=true;
     if(RedirCaracter(temp)) archive=true;
     if(exp1->operators==IF){did_if=true;}
-    //free(temp);//verificar si esta bien liberar aqui
-
-    //node* current=exp_line->head;
-
-  //  printf("%s:%d \n",exp1->name,exp1->operators);
+    
 
 
     while(line->head!=NULL)
@@ -1824,11 +1817,6 @@ void EjecuteLine(list* line)
             continue;
         }
 
-        //push_back(exp_line,(Expression*)malloc(sizeof(Expression)));
-        //current=current->next;
-        //current->value->name=temp;
-
-        //Expression * exp = (Expression*)malloc(sizeof(Expression));//para crear cada expresion de la lista de expresiones
         char* name=strdup(temp);
 
         if(strcmp(";",name)==0)
@@ -1838,9 +1826,7 @@ void EjecuteLine(list* line)
             if(line->head!=NULL) EjecuteLine(line);
             pid=getpid();
             if(did_if && !did_then) {printf("syntax error near unexpected token: `%s'\n",name);return;}
-            //if(did_if && !did_end) {printf("syntax error near unexpected token: `%s'\n",name);return;}
 
-            //EjecuteLine(line);
             return;
         }
 
@@ -1850,20 +1836,11 @@ void EjecuteLine(list* line)
         if(special_caracter_last || if_caracter_last)command=true;
         if(special_caracter_now && strcmp(temp,"`")==0) open_set_command=!open_set_command;
 
-        // if(special_caracter_now)
-        // {
-        //     if(did_if && did_then && !did_end) {printf("syntax error near unexpected token: `%s'\n",name);return;}
-        //     //if(did_if && !did_end) {printf("syntax error near unexpected token: `%s'\n",name);return;}
-
-        // }
-        //exp->operators=GetOperator(temp);
         int op=GetOperator(temp);
-        //if(exp->operators==SIMPLE_EXPRESSION)
+
         if(op==SIMPLE_EXPRESSION || PossibleArgumentExpression(op))////////lo que agregue esta solo aqui y en el metodo
         {
-            //if(!command)exp->operators=ARGS;//Si no estamos esperando un comando entonces estamos en presencia de un argumento
-            //if(archive)exp->operators=ARCHIVE;//Si la expresion anterior es un caracter especial de redireccion shora estamos en presencia de un archivo
-            if(!command)op=ARGS;//Si no estamos esperando un comando entonces estamos en presencia de un argumento
+           if(!command)op=ARGS;//Si no estamos esperando un comando entonces estamos en presencia de un argumento
             if(archive)op=ARCHIVE;//Si la expresion anterior es un caracter especial de redireccion shora estamos en presencia de un archivo
 
         }
@@ -1879,8 +1856,6 @@ void EjecuteLine(list* line)
 
         special_caracter_last=special_caracter_now;
         push_back(exp_line,GetStructExpression(name, op));
-        //printf("%s:%d\n",exp->name,exp->operators);
-       // printf("%s:%d\n",name,op);
 
         free(pop_front(line));
 
@@ -1897,34 +1872,17 @@ void EjecuteLine(list* line)
     {
         printf("token ` ` ' not found\n");
     }
-    ////Descomentar esto desde aqui
-    // int _pid =fork();
-    // if(_pid==0)
-    // {
-    
+    if(exp_line->size==1 && RedirCaracter(exp1->name))
+    {
+        printf("bash: syntax error near unexpected token `newline'\n");
+        return;
+    }
+
     Execute(exp_line->head,exp_line->tail);
 
     pid=getpid();
-    //char message[20];
-    //read(STDOUT_FILENO, message, 20);
-    //write(STDIN_FILENO, message, 20);
-    //printf("%s \n",message);
 
-    // }
-    // else if(_pid>0)
-    // {
-    //     return;
-    // }
-    // else
-    // {
-    //     int *status=0;
-    //     waitpid(_pid,status,0);
 
-    // }
-////Descomentar esto hasta aqui
-
-    // fclose(stdin);
-    // fclose(stdout);
     free_list(exp_line);
     free(line);
 }
@@ -1939,8 +1897,6 @@ void ReadAndEjecuteLine(list* line,char* word, char c)//crea una lista de string
     while(c!= '\n' && c!= EOF)
     {
 
-        //printf("Llego al while true\n");
-
         if(c==-1) exit(0);
 
             if(c=='#')
@@ -1948,60 +1904,6 @@ void ReadAndEjecuteLine(list* line,char* word, char c)//crea una lista de string
                 EndReadLine(strline,history);
                 break;
             }
-
-            // // // // if(c=='&')
-            // // // // {
-            // // // //     if(strcmp(word,"")!=0 && strcmp(word,"&")!=0)
-            // // // //     {
-            // // // //         push_back(line, strdup(word));
-            // // // //         strcpy(word,"");
-            // // // //     }
-            // // // //     ConcatChar(c,word);
-            // // // //     c=GetOneChar(strline,history);
-
-
-            // // // //     if(c!='&' && strcmp(word,"&")==0)
-            // // // //     {
-            // // // //         if(c=='\n')
-            // // // //         {
-            // // // //         //mandar el prceso al background
-            // // // //         }
-            // // // //         printf("syntax error near unexpected token `%c'",c);
-
-            // // // //         return;
-            // // // //     }
-
-            // // // //     // if(c!='&')
-            // // // //     // {
-            // // // //     //     EndReadLine(strline,history);//Hacer el background
-            // // // //     // }
-            // // // //     /////mandar el proceso actual a background
-            // // // //     /////verificar que primero se busca un and para despues comprobar que sea un &
-            // // // // }
-
-            // if(c==';')
-            // {
-            //     // ////////Primero terminar de armar la linea actual, y mandarla a ejecutar
-            //     // if(strcmp(word,"")==0 && line->head->next==NULL)
-            //     // {
-            //     //     printf("syntax error near unexpected token `;'\n");
-            //     //     return;
-            //     // }
-            //     // //push_back(line, strdup(word));
-            //     // //strcpy(word,"");
-            //     // //pop_front(line);
-            //     // //EjecuteLine(line);
-            //     // //print_list(line);
-            //     // //pop_back(line);
-            //     // //free_list(line);
-            //     // //line=init_list("init");
-
-            //     // //c=GetOneChar(strline,history);
-            //     // //c=GetOneChar();
-            //     // //continue;
-            //     // break;
-
-            // }
 
             if(SpecialCaracter(c))
             {
@@ -2029,7 +1931,6 @@ void ReadAndEjecuteLine(list* line,char* word, char c)//crea una lista de string
                    ConcatChar(c,word);
 
                    c=GetOneChar(strline,history);
-                   //c=GetOneChar();
                    continue;
 
             }
@@ -2041,7 +1942,6 @@ void ReadAndEjecuteLine(list* line,char* word, char c)//crea una lista de string
                 strcpy(word,"");
                 ConcatChar(c,word);
                 c=GetOneChar(strline,history);
-                //c=GetOneChar();
                 continue;
 
             }
@@ -2051,7 +1951,6 @@ void ReadAndEjecuteLine(list* line,char* word, char c)//crea una lista de string
                 if(word[0]=='\0')
                 {
                     c=GetOneChar(strline,history);
-                    //c=GetOneChar();
                     continue;
 
                 }
@@ -2059,33 +1958,23 @@ void ReadAndEjecuteLine(list* line,char* word, char c)//crea una lista de string
 
                 strcpy(word,"");///vacio a word para comenzar una nueva palabra
                 c=GetOneChar(strline,history);
-                //c=GetOneChar();
                 continue;
             }
 
-            //if(concat)
             ConcatChar(c,word);
             c=GetOneChar(strline,history);
-            //c=GetOneChar();
         }
 
         if(strcmp(word,"")!=0) push_back(line, strdup(word));
         strcpy(word,"");
         free(word);
         pop_front(line);
-        //print_list(line);
         if(line->head!=NULL)
         {
             if(strcmp(line->head->value,"again")==0)history=false;
             if(history) SaveLine(strline,line);
             EjecuteLine(line);
         }   
-
-        //free_list(line);
-
-///////////Llamar aqui al metodo para guardar history
-
-    //printf("\n HISTORY: %s \n",strline);
 }
 
 void fflush_stdin() {
@@ -2095,75 +1984,37 @@ void fflush_stdin() {
 
 void Shell()
 {
-    //signal(SIGINT,CtrlC);
 
 printf("\n");
  while (1)
     {
-        // int b = EOF;
-        // printf("%d", b);
         int std_in;
         int std_out;
-        //if(!did_again)
-        //{
            std_in=dup(STDIN_FILENO);
-           std_out=dup(STDOUT_FILENO);        
-        //}
-
-
+           std_out=dup(STDOUT_FILENO);    
         char * word= (char*)calloc(sizeof(char),100);//word es cada una de las palabras que se mandan en un espacio de line
         strcpy(word,"");
 
         list* line=init_list("init"); //line es la linked list que guarda los comandos argumentos y caracteres especiales
-        //pop_front(line);
-
-        // wait(NULL);
-        //printf("Llego al inicio\n");
+       
         if(pid_inicial==getpid()) printf("my-shell $ ");
-        // fflush(stdin);
-        
-        //write(STDOUT_FILENO,"lala",5);
-
-       // if()
-        //if(did_again)input_read("again.txt");
+ 
         did_again=false;
 
         char c;
         c = getchar();  //cada uno de los char a leer de consola
 
         if(c==-1) exit(0);
-        // bool concat=true;
-        // wait(NULL);
-
+  
 
         ReadAndEjecuteLine(line,word,c);
 
-        // fflush(stdout);
-
-        //if(!did_again) 
-        //{
+    
             dup2(std_in,STDIN_FILENO);
             dup2(std_out,STDOUT_FILENO);
             close(std_in);
             close(std_out);
-        //}
-
-
-
-        // close(STDIN_FILENO);
-        // dup2(STDIN_FILENO, STDIN_FILENO);
-        // char message[20];
-        // read(STDIN_FILENO, message, 20);
-        // printf("Buff: %s\n", message);
-        // char cadena[20];
-        // int a = scanf("%s", &cadena);
-
-        // printf("%d", a);
-        
-        // fflush_stdin();
-
-        //EndReadLine("",false);
-
+       
     }
 
 }
@@ -2177,27 +2028,20 @@ int main(int argc, char const *argv[])
     kv->key = strdup("neverusethisname");
     kv->value = strdup("neverusethisname");
     var_list = init_list(kv);
+
     getcwd(history_direction,200);
     strcpy(again_direction,history_direction);
-    //again_direction=strdup(history_direction);
     strcat(history_direction,"/history.txt");
     strcat(again_direction,"/again.txt");
 
     did_again=false;
-    //printf("%s",history_direction);
     signal(SIGINT,CtrlC);
 
-    //fork();
     pid=getpid();
     pid_inicial=getpid();
     did_ctrl_c=false;
 
-    //pid=fork();
-    //printf("PID inicial: %d\n",pid);
-    //if(pid!=0) Shell();
     Shell();
-
-    // Limpiando lista de variables
     free(var_list);
     return 0;
 }
