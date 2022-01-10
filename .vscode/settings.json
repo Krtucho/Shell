@@ -9,6 +9,8 @@
         "wait.h": "c",
         "algorithm": "c",
         "*.tcc": "c",
-        "fstream": "c"
+        "fstream": "c",
+        "exception": "c",
+        "new": "c"
     }
 }

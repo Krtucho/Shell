@@ -1,0 +1,10 @@
+pwd
+rm -rf ./test_dir
+ls
+pwd
+echo testing > testing.txt
+cat testing.txt
+ls
+rm ''$'\320''9'$'\302\001'
+cd ..
+ls

@@ -13,6 +13,7 @@
 //#include <string.h>
 #include<signal.h>
 
+
 #pragma region Lista
 
 #define __ReservedMemoryforNode (node*)malloc(sizeof(node));
@@ -177,6 +178,20 @@ void removeNode(list* l, node* item)
 
 void free_list(list* l)
 {
+    if(l->size > 100000){
+        // free(l);
+        return;
+    }
+    if(l->head == NULL)
+        {
+            free(l);
+            return;
+        }
+    if(l->head->next == NULL){
+        free(l->head);
+        free(l);
+        return;
+    }
     node* temp = l->head->next;
     node* current = l->head;
     while(current!=NULL)
@@ -188,7 +203,8 @@ void free_list(list* l)
             temp = temp->next;
         }
     }
-    free(l);
+    if(l != NULL)
+        free(l);
 }
 
 void print_list(list * t)
@@ -206,7 +222,7 @@ void print_list(list * t)
 #pragma endregion
 
 #pragma region Expression
-enum OPERATORS{
+enum OPERATORS{ // Enum con todos los tipos de operadores utilizados en el codigo
     TRUE = 0,
     FALSE = 1,
     SIMPLE_EXPRESSION=2,
@@ -237,7 +253,7 @@ enum OPERATORS{
 }OPERATORS;
 
 
-typedef struct Expression// TODO: Cambiar nombre a: Expression
+typedef struct Expression // Struct creado para guardar todos los tipos de tokens que podemos encontrarnos, tendran un nombre y un enum del tipo OPERATOR para diferenciarlos
 {
     char * name;
     list * args;
@@ -248,6 +264,14 @@ typedef struct Expression// TODO: Cambiar nombre a: Expression
 }Expression;
 
 #pragma endregion
+
+#pragma region KeyValuePair
+typedef struct keyvaluepair{ // Struct creado para guardar todos los pares de llave-valor que se guardaran en la lista de variables con sus valores para implementar el get set
+    void * key; // Nombre de la variable
+    void * value; // Valor guardado en la variable
+}keyvaluepair;
+#pragma endregion
+
 
 #pragma region Utiles
 
@@ -933,7 +957,7 @@ int AGAIN_CODE(node*argument)
 
 #pragma region Ejecucion
 
-int only_write(char * file){
+int only_write(char * file){ // Metodo para escribir el contenido que salga del stdout a un archivo
     int fd = open(file, O_WRONLY | O_CREAT);
 
     if(fd == -1)
@@ -949,7 +973,7 @@ int only_write(char * file){
     close(fd);
     return 0;
 }
-int only_append(char * file, char buf[1000], int num){
+int only_append(char * file, char buf[1000], int num){ // Metodo para concatenar el contenido que esta guardado en buf hacia un archivo, num sera la cantidad de caracteres que se van a escribir
 
     int fd=open(file, O_WRONLY | O_APPEND | O_CREAT , 0);
 
@@ -964,7 +988,7 @@ int only_append(char * file, char buf[1000], int num){
     close(fd);
     return 0;
 }
-int input_read(char * file){
+int input_read(char * file){ // Metodo para leer el contenido de un archivo y enviarlo al stdin
     int fd = open(file, O_RDONLY | O_CREAT);
 
     if(fd==-1)
@@ -978,36 +1002,32 @@ int input_read(char * file){
     return 0;
 }
 
-void Run(node * com){
-    // printf("Inside Run Method...\n");
-    Expression * com_to_exec = com->value;
+int Run(node * com){ // Correr comandos simples, hace un fork y el hijo llama a execvp, en caso de ser exit y que existan pipes, hacemos exit(0) desde el hijo y cerramos el fork
+    Expression * com_to_exec = com->value; // quedandonos con el value(Expression del primer nodo), debe de ser un comando a ejecutar, o algun comando que no exista
     if(com_to_exec->operators != SIMPLE_EXPRESSION)
-        return;
+        return -1;
 
-    // list * temp_args = init_list(com->next);
-
-    node * last = com->next;
-    Expression * last_com;
+    node * last = com->next; // Pedimos el nodo siguiente, para luego utilizarlo para buscar el ultimo argumento del comando a ejecutar
+    Expression * last_com; // Nos quedamos con el valor de tipo Expression del nodo que pedimos anteriormente
 
     if(last != NULL)
         last_com = last->value;
     else
         last_com = NULL;
 
-    int count = 0;
-    while(last_com != NULL && (last_com->operators == ARGS || last_com->operators== ARCHIVE)){// Con ARGS me refiero a los argumentos lo q aun no se bien como ponerle
-        count++;
+    int count = 0;  // Contador para saber cuantos argumentos tenemos
+    while(last_com != NULL && (last_com->operators == ARGS || last_com->operators== ARCHIVE)){// Comparamos en todo momento que sea de tipo ARGS o ARCHIVO para no equivocarnos y pasarle argumentos de algun tipo incorrecto
+        count++; 
         last = last->next;
         if(last != NULL)
             last_com = last->value;
         else
             last_com = NULL;
     }
-    // printf("Out of first while...\n");
 
-    char *myargs[count+2];
-    myargs[count+1] = NULL;
-    myargs[0] = strdup(com_to_exec->name);
+    char *myargs[count+2]; // Arreglo con los argumentos para llamar al execvp
+    myargs[count+1] = NULL; // Seteamos el ultimo valor del arreglo en Null para q sepa hasta donde tiene q leer
+    myargs[0] = strdup(com_to_exec->name); // En la primera posicion colocamos el nombre del comando a ejecutar
 
     int temp = 1; // Para ir ubicando argumenta a argumento en el arreglo
     node * current = com->next;
@@ -1019,49 +1039,33 @@ void Run(node * com){
         current=current->next;
     }
 
-    //FILE * fp;
-    //FILE * fp_out;
-    //printf("Voy a hacer fork\n");
+    pid_t rc = fork(); // Hago fork
 
-    pid_t rc = fork();
-    //printf("Acabo de hacer fork\n");
-
-  //  printf("Pid anterior:%d\n",pid);
     pid=rc;
-   // printf("Pid del fork:%d\n",pid);
 
     did_ctrl_c=false;
-
-    // char * buf;
 
     if (rc < 0) { // fork failed; exit
         fprintf(stderr, "fork failed\n");
         exit(1);
     } else if (rc == 0) { // child (new process)
-       // printf("Estoy en el fork, pid:%d\n",pid);
 
-        Expression * com_prev;// = com->previous;
-        if(com->previous != NULL){
+        // Aca verificamos el caso especial en que tengamos EXIT | WC u otro comando
+        Expression * com_prev; // Expression del nodo anterior
+        if(com->previous != NULL){ // Si el nodo actual tiene alguno antes de el, lo cogemos
             com_prev = com->previous->value;
 
-            if(com_prev->operators == PIPE){
+            if(com_prev->operators == PIPE){ // Si este fue un PIPE nos quedamos con el anterior a el y luego comparamos con que sea un EXIT
                 if(com->previous->previous != NULL){
                     com_prev = com->previous->previous->value;
 
-                    if(com_prev->operators == EXIT && com_to_exec->std_in==NULL){
-                        com_to_exec->std_in=strdup(com_prev->name);
-                        //FILE * fp;
-                        input_read(com_to_exec->std_in);
+                    if(com_prev->operators == EXIT && com_to_exec->std_in==NULL){ // De ser un EXIT sabemos que tenemos que cerrar el fork del pipe pero no el proceso principal
+                        com_to_exec->std_in=strdup(com_prev->name); // Guardamos en el std_in del comando a ejecutar el nombre: exit para luego abrir un archivo con este nombre y guardar la salida del exit 
 
-                        //fp = freopen(com_to_exec->std_in,"w", stdin);
-                        //fclose(fp);
+                        input_read(com_to_exec->std_in); // Leemos del archivo que se va a crear vacio y enviamos su contenido al stdin
 
-
-                        //fp = freopen(com_to_exec->std_in,"r", stdin);
-
-                        int e = execvp(myargs[0], myargs);
-                        //fclose(fp);
-                        if(e == -1){
+                        int e = execvp(myargs[0], myargs); // Ejecutamos el comando pasandole como entrada la salida del archivo vacio (null)
+                        if(e == -1){ // Si el comando no existe, se devolvera una salida no satisfactoria
                             printf("%s: command not found\n", myargs[0]);
                             exit(-1);
                         }
@@ -1070,162 +1074,60 @@ void Run(node * com){
             }
         }
 
-
-        //FILE * fp;
-
-        if(com_to_exec->std_in != NULL){
-            // printf("com_to_exec->std_in != NULL..\n");
-            input_read(com_to_exec->std_in);
-
-            //fp = freopen(com_to_exec->std_in,"r", stdin);
+        if(com_to_exec->std_in != NULL){ // Si el comando a ejecutar tiene que leer de algun archivo, el nombre del cual esta guardado en el std_in(operador <), x
+            input_read(com_to_exec->std_in); // entonces lo abrimos y enviamos su contenido al stdin
         }
 
-        // int num = read(STDOUT_FILENO, buf, sizeof(buf));
-        // printf("%d\n",num);
-        // printf("%s", buf);
-
+        // Caso en que sea necesario escribir la salida del comando en un archivo
         if(com != NULL && com->next != NULL){
-
             node * current = com;
             Expression * exp;
 
             while(current != NULL){
                 exp = current->value;
                 if(exp->operators == REDIRBIG || exp->operators == DOUBLEREDIRBIG){
-                    FILE * fp = fopen("temp", "w");
+                    FILE * fp = fopen("temp", "w"); // Abrimos temp vacio para luego escribir contenido en el
                     fclose(fp);
-                    only_write("temp");
-                    //fp_out = freopen("temp", "w", stdout);
+                    only_write("temp"); // Todo el contenido que salga por el stdout sera redirigido al archivo temp
                     break;
                 }
                 current = current->next;
             }
         }
 
-        int e = execvp(myargs[0], myargs);
+        int e = execvp(myargs[0], myargs); // Ejecutamos el comando y todo su contenido que saldra por el stdout estara siendo redirigido al archivo temp
 
-        if(e == -1){
+        if(e == -1){ // En caso de no encontrarse el comando se devuelve una salida no satisfactoria
             printf("%s: command not found\n", myargs[0]);
             exit(-1);
         }
-        //int e = execvp(myargs[0], myargs);
-        // fclose(stdin);
-        // fclose(stdout);
-        // kill(rc, SIGKILL);
-
-        // printf("I'm in child process...\n");
     }
     else { // parent goes down this path (main)
-        int *status=0;
+        int status; // Estado de la salida de la ejecucion del comando
 
-        // char message[20];
-        // read(STDOUT_FILENO, message, 20);
-        // printf("Buff: %s\n", buf);
-
-
-        pid_t p=waitpid(rc,status,0);
-        //exit(1);
-        //kill(rc, SIGKILL);
-        // signal(SIGCHLD, handler(SIGKILL));
-        // int child_pid = waitpid(-1, status, WNOHANG);
-        // printf("%d\n", child_pid);
-        //int wc = wait(NULL);
-        // fclose(stdin);
-        // fclose(stdout);
-
-        // if(com_to_exec->std_in != NULL){
-        //     if(fp != NULL)
-        //         fclose(fp);
-        // }
-        // if(fp_out != NULL)
-        //     fclose(fp_out);
-
-
-        kill(rc, SIGKILL);
-
-        // printf("%s", message);
+        pid_t p=waitpid(rc,&status,0); // esperamos por el hijo a que este termine de ejecutar el comando
+        
+        kill(rc, SIGKILL); // Matamos al hijo para que no quede en estado zombie
+        return status; // Retornamos el valor de la salida de la ejecucion del comando, si se encontro y se ejecuto se devolvera 0, en caso contrario se devolvera algun numero distinto de 0 que describa el error
     }
-    // close();
-    // kill(rc, SIGKILL);
-    // exit(1);
-
-    // printf("%d", e);
-    // fclose(stdin);
-    // fclose(stdout);
 }
 
-void handler(int sig, pid_t pid){
-    kill(pid, sig);
+int SIMPLE_Expression_CODE(node * exp){ // Resolver expresiones simples, digase ejecutar un comando
+        return Run(exp);
 }
 
-int SIMPLE_Expression_CODE(node * exp){
-    // int rc = fork();
-    // if (rc < 0) { // fork failed; exit
-    //     fprintf(stderr, "fork failed\n");
-    //     exit(1);
-    // } else if (rc == 0) { // child (new process)
-    //     printf("I'm in child process...\n");
-        Run(exp);
-        return 0;
-    // } else { // parent goes down this path (main)
-    //     int wc = wait(NULL);
-    // }
-}
-
-// int AND_CODE(node * com){
-
-// }
-int TRUE_CODE(node* exp){
+int TRUE_CODE(node* exp){ // Comando true
     return 0;
 }
 
-int FALSE_CODE(node* exp){
+int FALSE_CODE(node* exp){ // Comando false
     return 1;
 }
 
-bool inside_pipe = false;
+bool inside_pipe = false; // Variable booleana para saber si nos encontramos dentro de un pipe (Muy util para ejecutar el comando EXIT)
 
 int EXIT_CODE(node* exp){
-    // printf("Inside EXIT_CODE METHOD\n");
-    if(inside_pipe){
-        // Expression * next=exp->next->value;
-        // if(next->operators==PIPE)
-        // {
-        //     Expression * command_=exp->next->next->value;
-        //     command_->std_in=command_->name;
-        //     freopen(command_->std_in,"w", stdin);
-        //     fclose(stdin);
-
-        // }
-
-        //FILE * fp;
-        //     // printf("Inside pipe was True...\n");
-        // printf("%d",0);
-        // pid_t rc = fork();
-        // if (rc < 0) { // fork failed; exit
-        //     fprintf(stderr, "fork failed\n");
-        //     exit(1);
-        // } else if (rc == 0) { // child (new process)
-        //     exit(0);
-        // }
-        // else { // parent goes down this path (main)
-        //     int *status=0;
-        //     pid_t p=waitpid(rc,status,0);
-            //exit(1);
-            //kill(rc, SIGKILL);
-            // signal(SIGCHLD, handler(SIGKILL));
-            // int child_pid = waitpid(-1, status, WNOHANG);
-            // printf("%d\n", child_pid);
-            //int wc = wait(NULL);
-            // fclose(stdin);
-            // fclose(stdout);
-        //     kill(rc, SIGKILL);
-        // }
-        //     // write(STDOUT_FILENO, 0, 1);
-        //Expression * current=exp->value;
-        //fp = freopen(current->name, "w", stdout);
-        //fclose(fp);
-        // exit(0);
+    if(inside_pipe){ // Si nos encontramos dentro de un pipe, este no se cierra, por tanto retornamos 0, sino cerramos el proceso desde el cual se llamo al comando exit
         return 0;
     }
     exit(0);
@@ -1233,56 +1135,79 @@ int EXIT_CODE(node* exp){
 }
 
 
-list * var_list;// = init_list("neverusethisname");
+list * var_list; // Lista para guardar las variables del get, set y unset
 
-int PrintVariables(){
+int PrintVariables(){ // Metodo para imprimir las variables que contenga la lista de variables al llamar al set
 
     if(var_list->size <= 1)
         return 0;
 
     node * current = var_list->head->next;
     char * output = strdup("");
+    int count = 2;
 
-    while (current != NULL)
+    while (current != NULL && count <= var_list->size) // Mientras quedes nodos en la lista sigue ejecutando el bucle
     {
-        char * current_exp = current->value;
-        // if(strcmp(current_exp->name, "neverusethisname") == 0)
+
+        keyvaluepair * kv = current->value;
+        char * current_exp = kv->key;
+        char * value = kv->value;
         
-        strcat(output, current_exp);
+        strcat(output, current_exp); // Concatenando key a la salida
         strcat(output, "=");
-        char * c = getenv(current_exp);
-        if(c!= NULL)
-            strcat(output, c);
-        // if(current != var_list->tail)
-        strcat(output, "\n");
+
+        if(value!= NULL)
+            strcat(output, value); // Concatenando value a la salida
+
+        if(count != var_list->size)
+            strcat(output, "\n");
         current = current->next;
+        count++;
     }
     
-    printf("%s", output);
+    printf("%s\n", output);
     return 0;
 }
 
 int Execute(node * first_cmd, node * last_cmd);
-node * search_str_node(list * l, char * target){
-    node * current = l->head;
 
-    while(current != NULL)
+// Metodo utilizado para buscar el nodo que contenga una llave igual a target
+node * search_str_node(list * l, char * target){
+    node * current = l->head->next;
+    int count = 2;
+
+
+    while(current != NULL && count <= l->size && current->value != NULL)
     {
-        char * current_exp = current->value;
+        keyvaluepair * kv = current->value;
+        char * current_exp = strdup(kv->key);
         if(strcmp(current_exp, target) == 0){
             return current;
         }
         current = current->next;
+        count++;
     }
     return NULL;
 }
+
+// Annadir una variable de tipo keyvaluepair a la lista de variables del get, set y unset
 int AddVar(char * key, char * value){
-    if(search_str_node(var_list, key) == NULL){
-        push_back(var_list, key);
+    node * temp;
+    if((temp = search_str_node(var_list, key)) == NULL){ // Comprobando que no se haya agregado un nodo con esa llave a la lista, en caso de encontrar alguno, se cambia el value de esa variable
+        keyvaluepair * kv = (keyvaluepair*)malloc(sizeof(keyvaluepair));
+        kv->key = strdup(key);
+        kv->value = strdup(value);
+
+        push_back(var_list, kv);
     }
-    return setenv(key, value, 1);
+    else{
+        keyvaluepair * kv = temp->value;
+        kv->value = strdup(value);
+    }
+    return 0;
 }
 
+// Busca en la lista el proximo nodo Expression que sea un Operador de Caracter Set
 node * FindSetCharacter(node * beg){
     node * current = beg;
     
@@ -1297,123 +1222,37 @@ node * FindSetCharacter(node * beg){
     return NULL;
 }
 
+// Ejecuta el contenido dentro de las comillas del comando SET 
 int ExecuteSetCharacter(char * key, node* beg , node * last){
-    node * end =  FindSetCharacter(last->next);
+    node * end =  FindSetCharacter(last->next); // Busca el nodo final, para tener bien definidos los limites del codigo a ejecutar entre las comillas
 
     if(end == NULL)
         return -1;
-
-
-    
-
-    FILE * fp = fopen("temp2", "w");
+   
+    FILE * fp = fopen("temp2", "w"); // Abriendo archivo temp2 para guardar salida de ejecucion de lo que se encuentre entre las comillas
     fclose(fp);
     
-    // int std_in=dup(STDIN_FILENO);
-    // int std_out=dup(STDOUT_FILENO);
-
-    // dup2(std_in, STDIN_FILENO);
-    // dup2(std_out, STDOUT_FILENO);
-
-    only_write("temp2");
+    only_write("temp2"); // escribiendo lo siguiente que salga por el stdout al archivo temp2
     
 
-    Execute(last->next, end->previous);
+    Execute(last->next, end->previous); // ejecutando el comando que se ha pasado entre las comillas
     int *status=0;
     waitpid(-1, status, WNOHANG);
 
-    input_read("temp2");
+    input_read("temp2"); // leyendo el contenido del archivo temp2
 
 
     char file_contents[1000];
     int num=read(STDIN_FILENO,file_contents,sizeof(file_contents));
-    file_contents[num] = '\0';
-    printf("%d",num);
-    //fread(file_contents,sb.st_size,1,fp_in);
+    file_contents[num] = '\0'; // guardando el contenido en file_contents
 
-    // exp->std_out=strdup(file_contents);
-    // printf("%s", file_contents);
-    //fclose(fp_in);
-
-
-    AddVar(key, file_contents);
-
-    // free(file_contents);
-    // close(std_in);
-    // close(std_out);
-
-    // if(remove("temp2")){
-    //     printf("ok");
-    // }
-
-    
+    AddVar(key, file_contents); // Annadiendo una nueva variable con llave=key y value=file_contents
 
     return 0;
-
-    
-
-    // int fd[2];
-    // char buf[10000];
-    // int num;
-
-    // pipe(fd);
-    // int *status=0;
-    // int rc = fork();
-
-    // if(rc == 0)// Hijo
-    // {
-    //     close(fd[0]);
-    //     dup2(fd[1], STDOUT_FILENO);
-    //     close(fd[1]);
-
-    //     return Execute(last->next, end->previous);
-
-    // }
-    // else if(rc==-1){
-    //     // break;
-    //     printf("Error\n");
-    // }
-    // else{
-    //     close(fd[1]);
-    //     dup2(fd[0], STDIN_FILENO);
-
-    //     int num = read(fd[0], buf, sizeof(buf));
-    //     // printf("%d", num);
-    //     close(fd[0]);
-    //     AddVar(key, buf);
-
-    //     int child_pid = waitpid(-1, status, WNOHANG);
-    //     kill(rc, SIGKILL);
-
-
-    // }
-
-
-
-    
 }
 
+// Ejecuta el comando Set
 int SET_CODE(node* exp){
-    //     char * a = strdup("a");
-    // char * b = strdup("`ls`");
-
-    // int result = setenv(a, b, 1);
-    
-    // printf("%s\n", getenv(a));
-
-
-    // int removed = unsetenv(a);
-    // int removed2 = unsetenv(a);
-
-    // printf("%d\n", result);
-    // char * c = getenv(a);
-    // if(c != NULL)
-    //     printf("%s\n", getenv(a));
-    // else
-    //     printf("NULL");
-
-    // return 0;
-
     // printf("Inside Run Method...\n");
     Expression * com_to_exec = exp->value;
     if(com_to_exec->operators != SET)
@@ -1447,8 +1286,6 @@ int SET_CODE(node* exp){
 
     // Buscando los argumentos para ir concatenandolos y asi formar el string final que corresponde a la variable
 
-    // list * temp_args = init_list(com->next);
-
     int count = 0;
     while(last_exp != NULL && (last_exp->operators == ARGS )){// Con ARGS me refiero a los argumentos lo q aun no se bien como ponerle
         count++;
@@ -1458,11 +1295,6 @@ int SET_CODE(node* exp){
         else
             last_exp = NULL;
     }
-    // printf("Out of first while...\n");
-
-    // char *myargs[count+1];
-    //myargs[count+1] = NULL;
-    // myargs[0] = strdup(var_name->name);
 
     char * str_value = strdup("");
 
@@ -1471,7 +1303,6 @@ int SET_CODE(node* exp){
     while (temp < count)
     {
         Expression * current_com = current->value;
-        // myargs[temp] = strdup(current_com->name);
         if(temp >0)
             strcat(str_value, " ");
         strcat(str_value, current_com->name);
@@ -1480,18 +1311,10 @@ int SET_CODE(node* exp){
     }
 
     AddVar(var_name->name, str_value);
-    // while(last_com != NULL && (last_com->operators == ARGS || last_com->operators== ARCHIVE)){// Con ARGS me refiero a los argumentos lo q aun no se bien como ponerle
-    //     count++;
-    //     last = last->next;
-    //     if(last != NULL)
-    //         last_com = last->value;
-    //     else
-    //         last_com = NULL;
-    // }
-    // printf("Out of first while...\n");
     return 0;
 }
 
+// Ejecuta el comando Get
 int GET_CODE(node* exp)
 {
     Expression * com_to_exec = exp->value;
@@ -1505,16 +1328,19 @@ int GET_CODE(node* exp)
     if(next_exp->operators != ARGS)
         return -1;
 
-    char * output = getenv(next_exp->name);
-    if(output == NULL)
-        return -1;
-    
-    printf("%s\n", output);
-    return 0;
+    node * temp = search_str_node(var_list, next_exp->name);
+    if(temp != NULL)
+    {
+        keyvaluepair * kv = temp->value;
+        char * output = kv->value;
+        printf("%s\n", output);
+        return 0;
+    }
+    return -1;
 }
 
 
-
+// Ejecuta el comando unset
 int UNSET_CODE(node* exp)
 {
     Expression * com_to_exec = exp->value;
@@ -1528,16 +1354,13 @@ int UNSET_CODE(node* exp)
     if(next_exp->operators != ARGS)
         return -1;
 
-    int removed = unsetenv(next_exp->name);
-
     node * temp = search_str_node(var_list, next_exp->name);
-    if(temp != NULL)
+    if(temp != NULL){
         removeNode(var_list, temp);
-    // char * output = getenv(next_exp->name);
-    if(removed == -1)
-        return -1;
+        return 0;
+    }
     
-    return 0;
+    return -1;
 }
 
 
@@ -1566,76 +1389,47 @@ node * Search_AND_OR(node * first_cmd, node * last_cmd){
         current_temp = current->value;
         if(current_temp->operators == IF){
             is_if = is_set_char = true;
-            
-            //continue;
             }
         else if(current_temp->operators == SET_CHARACTER){
             is_set_char = !is_set_char;
         }
         else if(current_temp->operators == END){
             is_if = is_set_char = false;
-            //continue;
             }
         else if((current_temp->operators == AND || current_temp->operators == OR) && !is_if && !is_set_char){
-            // free(current_temp);
             return current;
         }
 
         current = current->next;
     }
-
-    // if(current == NULL)
-    //     printf("current is NULL");
-    // if(current_temp == NULL)
-    //     printf("current_temp is NULL");
-    // free(current_temp);
-    // free(current);
     return NULL;
 }
 
 node * Search_PIPE(node * first_cmd, node * last_cmd){
-    // printf("In Search PIPE method...\n");
     bool is_if, is_set_char = false;
     node * current = first_cmd;
-    Expression * current_temp;// = current->value;
+    Expression * current_temp;
     while(current != last_cmd){
-        // printf("In while searching pipes...\n");
         current_temp = current->value;
-        // current_temp->operators
         if(current_temp->operators == IF){
             is_if = true;
-            //continue;
             }
         else if(current_temp->operators == SET_CHARACTER){
             is_set_char = !is_set_char;
         }
         else if(current_temp->operators == END){
             is_if = is_set_char = false;
-            //continue;
             }
         else if(current_temp->operators == PIPE && !is_if && !is_set_char){
-            // free(current_temp);
             return current;
         }
 
-        // printf("Changing current variable...\n");
         current = current->next;
-        // if(current == NULL)
-        //     printf("current is NULL");
-        // printf("current variable changed...\n");
-        // Expression * temp = current->value;
-        // printf("current->value: %s", temp->name);
-        // free(temp);
     }
-    // if(current_temp != NULL)
-        // free(current_temp);
-    // if(current != NULL)
-        // free(current);
     return NULL;
 }
 
 node * Search_IF_THEN_ELSE(node * first_cmd, node * last_cmd, enum OPERATORS operator){
-    // printf("I'm in IF THEN ELSE method...\n");
     node * current = first_cmd;
     bool is_set_char = false;
     Expression * current_temp = current->value;
@@ -1649,9 +1443,6 @@ node * Search_IF_THEN_ELSE(node * first_cmd, node * last_cmd, enum OPERATORS ope
         }
         current = current->next;
     }
-    // free(current);
-    // free(current_temp);
-    // printf("End of Search IF_THEN_ELSE method...\n");
     return NULL;
 }
 
@@ -1662,22 +1453,18 @@ int GetIndex(Expression * op){
 
 int ExecuteExpression(node * cmd_to_exec){
     Expression * node_com = cmd_to_exec->value;
-    // enum OPERATORS op = node_com->operators;
-    // printf("Getting index_method...\n");
-    // printf("%d", node_com->operators);
     int index = node_com->operators;
-    // printf("Index: %d \n", index);
     return testing[index](cmd_to_exec);
-    // free(node_com);
 }
 
 
 int SolveExpressions(node * first_cmd, node * last_cmd){
     node * current = first_cmd;
+    Expression * current_exp = current->value;
 
-    // printf("Start ExecuteExpression method\n");
-
-    return ExecuteExpression(current);
+    if(current_exp->operators != REDIRBIG && current_exp->operators != REDIRLESS && current_exp->operators != DOUBLEREDIRBIG) 
+        return ExecuteExpression(current);
+    return -1;
 }
 
 
@@ -1694,33 +1481,19 @@ int SolveBiggerRedir(node * first_cmd, node * last_cmd, int exp_out){
         if(current_exp->operators==REDIRBIG)
         {
             Expression *current_next=current->next->value;
-            // int fd = open(current_next->name, O_WRONLY | O_CREAT);
-            // close(fd);
-
-            // fp = freopen(current_next->name, "w", stdout);
-            // fclose(fp);
 
             fp=fopen(current_next->name,"w");
             fclose(fp);
             output=current_next;
-
-            // continue;
-
         }
         else if(current_exp->operators==DOUBLEREDIRBIG)
         {
             Expression *current_next=current->next->value;
-            // int fd=open(current_next->name, O_WRONLY | O_APPEND | O_CREAT , 0);
-            // close(fd);
-
-            // fp = freopen(current_next->name, "a", stdout);
-            // fclose(fp);
 
             fp=fopen(current_next->name,"a");
             fclose(fp);
 
             output=current_next;
-            // continue;
 
         }
         current=current->next;
@@ -1728,84 +1501,28 @@ int SolveBiggerRedir(node * first_cmd, node * last_cmd, int exp_out){
     if(output!=NULL){
         Expression * exp=first_cmd->value;
 
-       // FILE * fp_in=fopen("temp","r");
-        //struct stat sb;
+        if(exp->operators != REDIRBIG && exp->operators != REDIRLESS && exp->operators != DOUBLEREDIRBIG){ 
         input_read("temp");
 
 
         char file_contents[1000];
         int num=read(STDIN_FILENO,file_contents,sizeof(file_contents));
 
-        //fread(file_contents,sb.st_size,1,fp_in);
 
         exp->std_out=strdup(file_contents);
-        // printf("%s", file_contents);
-        //fclose(fp_in);
 
        if(remove("temp")){}
 
         char * test = strdup(output->name);
         only_append(test, file_contents, num);
 
-        //FILE * fp_out = freopen(output->name,"a",stdout);
-        //printf("%s \n", exp->std_out);
-        //fclose(fp_out);
-
-        //fflush(stdout);
-        //fflush(stdin);
-        // close(STDIN_FILENO);
-        // close(STDOUT_FILENO);
-        // exp->std_out="1";
         redir_found = true;
+        }
     }
 
     if(redir_found == false)
         return exp_out;
     return 0;
-    // while ()
-    // {
-    //     /* code */
-    // }
-
-
-
-    // node * current;
-    // node * BIGGER_REDIR = SearchBiggerRedir(last_cmd);
-
-    // printf("")
-    // if(BIGGER_REDIR == NULL)
-    //     return first_cmd;
-
-    // current = BIGGER_REDIR->previous;
-
-    // Expression * prev_temp = current->previous->value;
-    // Expression * current_temp = current->value;
-
-
-    // while(current_temp->operators==REDIRBIG ||  // >
-    //       current_temp->operators==REDIRLESS || // <
-    //       (current_temp->operators==ARCHIVE && //  < archivo o....... > archivo
-    //        (prev_temp->operators==REDIRLESS || prev_temp->operators==REDIRBIG)
-    //       )|| // < comando o ............. > comando
-    //       (current_temp->operators==SIMPLE_EXPRESSION && //  < comando o....... > comando
-    //        (prev_temp->operators==REDIRLESS || prev_temp->operators==REDIRBIG)
-    //       )
-    //       ){
-    //     // Expression * prev_temp = current->previous->value;
-    //     // Expression * current_temp = current->value;
-    //     // current->previous->value
-    //     prev_temp->std_in = current_temp->std_out;
-    //     current = current->previous;
-
-    //     if(current == NULL){
-    //         return NULL;
-    //     }
-
-    //     prev_temp = current->previous->value;
-    //     current_temp = current->value;
-    // }
-
-    //return first_cmd;
 }
 
 node * SearchBiggerRedir(node * last_cmd){
@@ -1826,57 +1543,32 @@ node * SearchBiggerRedir(node * last_cmd){
 node * SolveLessRedir(node * first_cmd, node * last_cmd){
     node * current = last_cmd;
     node * input=NULL;
-    //FILE * fp;
     Expression * current_exp;
 
-    // printf("Llegamos a < wiiiiiii!!!!\n");
     while (current != NULL)
     {
         current_exp = current->value;
         if(current_exp->operators == REDIRLESS){
-            // printf("Inside current REDIRLESS if...\n");
-            // printf("current_exp.name = %d", current_exp->operators);
             input=current->next;
             break;
         }
         current = current->previous;
     }
-    // if(current_exp != NULL)
-    //     printf("%s\n", current_exp->name);
-    // else
-    //     printf("current_exp = NULL");
 
     if(input!=NULL)
     {
-        // printf("Input was not equal NULL...\n");
         Expression * input_exp=input->value;
-        // printf("%s \n", input_exp->name);
-        // fp=fopen(input_exp->name,"r");
-        // struct stat sb;
         Expression * fisrt_exp=first_cmd->value;
-        // if(stat(input_exp->name,&sb)==-1)
-        // {
-        //     fisrt_exp->std_out=0;
-        //     return first_cmd;
-        // }
-        // char * file_contents=malloc(sb.st_size);
-        //fread(file_contents,sb.st_size,1,fp);
         fisrt_exp->std_in=input_exp->name;
-        // printf("%s", file_contents);
-        // fclose(fp);
-        // printf("%s \n", fisrt_exp->std_in);
     }
-    // printf("End of Less Redir...\n");
     return first_cmd;
 }
 
 
 int Solve_Leaves(node * first_cmd, node * last_cmd){
     SolveLessRedir(first_cmd, last_cmd);
-    // printf("Starting to solve Expressions...\n");
     int exp_out = SolveExpressions(first_cmd, last_cmd);
     return SolveBiggerRedir(first_cmd, last_cmd, exp_out);
-
 }
 
 // Leaves
@@ -1888,8 +1580,6 @@ int Execute(node * first_cmd, node * last_cmd){
         return Solve_Leaves(first_cmd, last_cmd);
     }
 
-    // printf("Into Execute Method...\n");
-
     // AND OR
     node * AND_OR = Search_AND_OR(first_cmd, last_cmd); // Buscando And u Or (&& u ||) sin que se encuentren dentro de un if
     Expression * AND_OR_com;
@@ -1897,16 +1587,9 @@ int Execute(node * first_cmd, node * last_cmd){
         AND_OR_com = AND_OR->value;
 
         int output = Execute(first_cmd, AND_OR->previous);
-        // printf("Out of left &&...\n");
-        // wait(NULL);
-        //Expression * output_com = output->value;
         if(AND_OR_com->operators == AND){
             if(output ==0)
             { // Si && retorna true devuelve el codigo a la derecha
-                // fclose(stdin);
-                // fclose(stdout);
-                //close(STDOUT_FILENO);
-                //close(STD_FILENO);
                 return Execute (AND_OR->next, last_cmd);
             }
             return output;
@@ -1915,127 +1598,50 @@ int Execute(node * first_cmd, node * last_cmd){
                 return Execute(AND_OR->next, last_cmd);
             return output;
         }
-        // free(output);
-        // free(output_com);
-        // return NULL;
-
-        // free(AND_OR);
-        // free(AND_OR_com);
     }
 
-    // printf("Start searching Pipes...\n");
     // Pipes
     node * PIPE_node = Search_PIPE(first_cmd, last_cmd);
-    // printf("Out of found PIPE method...\n");
     Expression * PIPE_node_com;
-    //if(PIPE_node != NULL)
 
 
     if(PIPE_node!= NULL){ // 3 casos
         PIPE_node_com = PIPE_node->value;
-        // int fd1[2];
-        // int status,pid;
-
-        // pipe(fd1);
-        // pid=fork();
-        // if(pid==0)
-        // {
-        //     dup2(fd1[READ_END],STDIN_FILENO);
-        //     close(fd1[READ_END]);
-
-        //     dup2(fd1[WRITE_END],STDOUT_FILENO);
-        //     close(fd1[WRITE_END]);
-        //     return Execute(first_cmd,PIPE_node->previous);
-        // }
-        // else
-        // {
-        //     pid=fork();
-        //     if(pid==0)
-        //     {
-        //         dup2(fd1[READ_END],STDIN_FILENO);
-        //         close(fd1[WRITE_END]);
-        //         return Execute(PIPE_node->next,last_cmd);
-
-        //     }
-        //     wait(NULL);
 
         int fd[2];
         pid_t pidC;
         int *status=0;
-        // char buf[10];
-        // int num;
         int output=0;
 
         inside_pipe = true;
         pipe(fd);
-      //  printf("Se va a hacer fork\n");
         pidC = fork();
-      //  printf("Se hizo fork\n");
-
-     //   printf("pid antes del fork: %d\n",pid);
-        pid=pidC;//getpid();
-     //   printf("pid despues del fork: %d\n",pid);
+        pid=pidC;
         did_ctrl_c=false;
+
         if(pidC==0){
             close(fd[0]);
             dup2(fd[1], STDOUT_FILENO);
             close(fd[1]);
-            // printf("I'm in execute 1...\n");
             Execute(first_cmd, PIPE_node->previous);
-            // execvp(myargs[0], myargs);
-            // exit(0);
-            // break;
         }
         else if(pidC==-1){
-            // break;
             printf("Error\n");
         }
         else{
 
-           // pid_t p=waitpid(pidC,status,0);
-            //kill(p, SIGKILL);
-            // pidC = fork();
-            // if(pidC==0)
-            // {
-            // pid_t p1=waitpid(pidC,status,0);
-            // kill(p1, SIGKILL);
-
             close(fd[1]);
             dup2(fd[0], STDIN_FILENO);
-                // num = read(fd[0], buf, sizeof(buf));
-                // printf("%d\n",num);
             close(fd[0]);
 
-                // printf("I'm in execute 2...\n");
             output = Execute(PIPE_node->next, last_cmd);
-            // }
-            // else
-            //{
-           // pid_t p=waitpid(pidC,status,0);
-                //wait(NULL);
-            //}
-           //wait(status);
-
-
-        //    pid_t p1=waitpid(pidC,status,0);
-        //     kill(pidC, SIGKILL);
             int child_pid = waitpid(-1, status, WNOHANG);
-            // printf("%d\n", child_pid);
-            // execvp(myargsaaa[0], myargsaaa);
-            // break;
             kill(pidC, SIGKILL);
         }
 
-
-        // wait(status);
-
-            // free(fd);
-
-       // wait(NULL);
-        // }
         inside_pipe = false;
 
-        Expression * com_prev;// = com->previous;
+        Expression * com_prev;
         if(PIPE_node->previous != NULL){
             com_prev = PIPE_node->previous->value;
 
@@ -2043,54 +1649,10 @@ int Execute(node * first_cmd, node * last_cmd){
                 if(remove("exit")){}
             }
         }
-        // printf("found a Pipe...\n");
         return output;
-
-
-       // node * output;
-        // Creo las variables de tipo Expression auxiliares, necesarias en este if para pedirles su -> operators
-        //Expression * first_cmd_next_com = first_cmd->next->value;
-        //Expression * first_cmd_next_next_com = first_cmd->next->next->value;
-
-
-
-        // if(first_cmd_next_com->operators == ARGS){ // Caso en q sea una hoja a la derecha
-
-
-        //     node * pipe_left = Solve_Leaves(first_cmd, PIPE_node->previous);
-        //     Expression* pipe_left_com = pipe_left->value;
-        //     PIPE_node_com->std_in = pipe_left_com->std_out;
-        //     //node * pipe_right =
-        //     SolveBiggerRedir(PIPE_node->next, last_cmd);
-        //     output = Execute(PIPE_node->next, last_cmd);
-        // }
-        // else if(first_cmd->next != NULL && first_cmd->next->next != NULL && first_cmd->next->next == PIPE_node){ // Caso 2: Luego del primer PIPE que encontramos viene otro PIPE | Expression | ...
-        //     node * pipe_left = Solve_Leaves(first_cmd, PIPE_node->previous);
-        //     Expression* pipe_left_com = pipe_left->value;
-        //     PIPE_node_com->std_in = pipe_left_com->std_out;
-        //     // node * pipe_right = Solve_Leaves(PIPE_node, )
-        //     if(PIPE_node_com->std_in == NULL)
-        //         PIPE_node_com->std_in = pipe_left_com->std_out;
-        //     Execute(PIPE_node->next, last_cmd);
-        // }
-        // else if(first_cmd->next != NULL && first_cmd_next_com->operators == IF){ // 3er caso: Le sigue un if a la derecha | if()then()else()...
-        //     node * pipe_left = Solve_Leaves(first_cmd, PIPE_node->previous);
-        //     Expression* pipe_left_com = pipe_left->value;
-        //     PIPE_node_com->std_in = pipe_left_com->std_out;
-        //     Execute(PIPE_node->next, last_cmd);
-        // }
-
-        // free(PIPE_node);
-        // free(PIPE_node_com);
-
-        // free(first_cmd_next_com);
-        // free(first_cmd_next_next_com);
-       // return output;
-        // free(output);
     }
 
 
-    // printf("Starting If Else part...\n");
     // If Else
     // Si se llego hasta aca fue debido a que no se encontraron ni PIPES, ni || o && en la lista de Comandos que tenemos desde el inicio hasta este punto
     // Luego tomamos el If que nos queda y ejecutamos el codigo de la siguiente forma: Buscamos hasta que encontremos un Then, ejecutamos el If y luego dependiendo
@@ -2120,24 +1682,7 @@ int Execute(node * first_cmd, node * last_cmd){
             return Execute(ELSE_node->next, END_node->previous);
         }
         return IF_output;
-
-        // Si encuentra un IF_ELSE entra en el ciclo
-        // IF_ELSE_node = Search_IF_THEN_ELSE(first_cmd, last_cmd, IF_ELSE);
-
-        //Caso 2: Buscando para IF THEN ELSE
-        // while (IF_ELSE_node == IF_ELSE)
-        // {
-        //     node * THEN =
-        // }
-        // free(THEN_node);
-        // free(END_node);
-        // free(ELSE_node);
-        // free(IF_output);
     }
-    // if(IF_ELSE_node != NULL)
-    //     free(IF_ELSE_node);
-
-    // printf("Starting to solve leaves...\n");
 
     // Leaves
     return Solve_Leaves(first_cmd, last_cmd);
@@ -2381,6 +1926,7 @@ void EjecuteLine(list* line)
     // fclose(stdin);
     // fclose(stdout);
     free_list(exp_line);
+    free(line);
 }
 
 void ReadAndEjecuteLine(list* line,char* word, char c)//crea una lista de string por cada instruccion y luego manda a ejecutarlas
@@ -2627,7 +2173,10 @@ printf("\n");
 
 int main(int argc, char const *argv[])
 {
-    var_list = init_list("neverusethisname");
+    keyvaluepair * kv = (keyvaluepair*)malloc(sizeof(keyvaluepair));
+    kv->key = strdup("neverusethisname");
+    kv->value = strdup("neverusethisname");
+    var_list = init_list(kv);
     getcwd(history_direction,200);
     strcpy(again_direction,history_direction);
     //again_direction=strdup(history_direction);
