@@ -1,0 +1,4 @@
+compilar con: gcc shell.c tools.c list.c input_output.c help.c -o shell
+ejecutar con ./shell
+
+el shell_debug.c contiene todo el c'odigo junto, listo para debuggear.
