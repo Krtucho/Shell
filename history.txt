@@ -1,0 +1,10 @@
+help if
+help ctrl+c
+help if
+helpvariables
+help variables
+help spaces
+help history
+help vhain
+help chain
+help ctrl+c
