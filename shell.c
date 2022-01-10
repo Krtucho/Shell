@@ -1,577 +1,13 @@
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <search.h>
-#include <unistd.h>
-#include <sys/wait.h>
-#include<sys/stat.h>
-//#include<stdbool.h>// Booleanos
-#include <fcntl.h>
-//#include <stdio.h>
-//#include <stdlib.h>
-//#include <string.h>
+//#include "help.h"
+#include "input_output.h"
 #include<signal.h>
-
-
-#pragma region Lista
-
-#define __ReservedMemoryforNode (node*)malloc(sizeof(node));
-#define __SafeMemoryReserved(x) if(x == NULL) exit(1);
-#define __SafeMemoryFree(x) if(x!=NULL) free(x);
-
-typedef struct node
-{
-    void * value;
-    struct node * previous;
-    struct node * next;
-} node;
-
-typedef struct list
-{
-    node* head;
-    node* tail;
-    unsigned int size;
-} list;
+#include "tools.h"
 
 
 
 
-list* init_list(void* v)
-{
-    list* l = (list*)malloc(sizeof(list));
-    __SafeMemoryReserved(l)
-    node *first = __ReservedMemoryforNode
-    __SafeMemoryReserved(first)
-    first->previous = NULL;
-    first->next = NULL;
-    first->value = v;
-    l->head = first;
-    l->tail = first;
-    l->size = 1;
-    return l;
-}
-void push_back(list* l, void* v)
-{
-    node* insert = __ReservedMemoryforNode
-    __SafeMemoryReserved(insert)
-    if(l->size==0)
-    {
-        insert->previous = NULL;
-        insert->next = NULL;
-        insert->value = v;
-        l->head = insert;
-        l->tail = insert;
-        l->size = 1;
-        return;
-    }
-    insert->value = v;
-    insert->previous = l->tail;
-    insert->next = NULL;
-    l->tail->next = insert;
-    l->tail = insert;
-    l->size++;
-}
-void push_front(list* l, void* v)
-{
-    node* insert = __ReservedMemoryforNode
-    __SafeMemoryReserved(insert)
-    if(l->size==0)
-    {
-        insert->previous = NULL;
-        insert->next = NULL;
-        insert->value = v;
-        l->head = insert;
-        l->tail = insert;
-        l->size = 1;
-        return;
-    }
-    insert->value = v;
-    insert->next = l->head;
-    insert->previous = NULL;
-    l->head->previous = insert;
-    l->head = insert;
-    l->size++;
-}
-node* pop_back(list* l)
-{
-    if(l->size == 0) return NULL;
-    node* last = l->tail;
-    l->tail = l->tail->previous;
-    if(l->tail != NULL)
-    {
-        l->tail->next = NULL;
-    }
-    l->size--;
-    return last;
-}
-node* pop_front(list* l)
-{
-    if(l->size == 0) return NULL;
-    node* first = l->head;
-    l->head = l->head->next;
-    if(l->head != NULL)
-    {
-        l->head->previous = NULL;
-    }
-    l->size--;
-    return first;
-}
-node* getAt(list* l, int ind)
-{
-    if(ind<0 || ind>=l->size)
-    {
-        printf("Index out of range.\n");
-        exit(1);
-    }
-    node* current = l->head;
-    for (size_t i = 0; i < ind; i++, current = current->next);
-    return current;
-}
-void insert(list* l, void* v, int ind)
-{
-    if(ind<0 || ind>=l->size)
-    {
-        printf("Index out of range.\n");
-        return;
-    }
-    if(ind==0)
-    {
-        push_front(l, v);
-        return;
-    }
-    if(ind==l->size-1)
-    {
-        push_back(l,v);
-        return;
-    }
-    node* insert = __ReservedMemoryforNode
-    __SafeMemoryReserved(insert)
-    insert->value = v;
-    node* lnode = l->head;
-    node* rnode = l->head->next;
-    for(size_t i = 1; i < ind; i++)
-    {
-        lnode = rnode;
-        rnode = rnode->next;
-    }
-    lnode->next = insert;
-    insert->previous = lnode;
-    insert->next = rnode;
-    rnode->previous = insert;
-    l->size++;
-}
-void removeNode(list* l, node* item)
-{
-    if(l->size == 0) return;
-    if(item->previous == NULL) pop_front(l);
-    else if (item->next == NULL) pop_back(l);
-    else
-    {
-        node* prev = item->previous;
-        node* next = item->next;
-        prev->next = next;
-        next->previous = prev;
-        l->size--;
-    }
-}
-
-void free_list(list* l)
-{
-    if(l->size > 100000){
-        // free(l);
-        return;
-    }
-    if(l->head == NULL)
-        {
-            free(l);
-            return;
-        }
-    if(l->head->next == NULL){
-        free(l->head);
-        free(l);
-        return;
-    }
-    node* temp = l->head->next;
-    node* current = l->head;
-    while(current!=NULL)
-    {
-        free(current);
-        current = temp;
-        if(temp != NULL)
-        {
-            temp = temp->next;
-        }
-    }
-    if(l != NULL)
-        free(l);
-}
-
-void print_list(list * t)
-{
-    node * current = t->head;
-    printf("Imprimiendo lista...\n");
-    while (current != NULL) {
-        printf("%s ", (char*)current->value);
-        current = current->next;
-    }
-    printf("\n");
-}
-
-
-#pragma endregion
-
-#pragma region Expression
-enum OPERATORS{ // Enum con todos los tipos de operadores utilizados en el codigo
-    TRUE = 0,
-    FALSE = 1,
-    SIMPLE_EXPRESSION=2,
-    EXIT=3,
-    CD=6,
-    HISTORY=4,
-    HELP=5,
-    AGAIN=10,
-    GET=9,
-    UNSET=8,
-    SET=7,
-    //GET=10,
-    SET_CHARACTER=19,
-    AND = 20,
-    OR = 21,
-    PIPE = 22,
-    IF = 23,
-    REDIRBIG=24,
-    THEN=25,
-    ELSE=26,
-    END=27,
-    ARGS=28,
-    IF_ELSE=29,
-    REDIRLESS=30,
-    ARCHIVE=31,
-    DOUBLEREDIRBIG=32
-
-}OPERATORS;
-
-
-typedef struct Expression // Struct creado para guardar todos los tipos de tokens que podemos encontrarnos, tendran un nombre y un enum del tipo OPERATOR para diferenciarlos
-{
-    char * name;
-    list * args;
-    char * std_in;
-    char * std_out;
-    bool calculated;
-    enum OPERATORS operators;
-}Expression;
-
-#pragma endregion
-
-#pragma region KeyValuePair
-
-typedef struct keyvaluepair{ // Struct creado para guardar todos los pares de llave-valor que se guardaran en la lista de variables con sus valores para implementar el get set
-    void * key; // Nombre de la variable
-    void * value; // Valor guardado en la variable
-}keyvaluepair;
-#pragma endregion
-
-
-#pragma region Utiles
-
-static char *special_strings[] = {"true","false","exit","cd","history","help","again","set","`","get","unset","&&","||",
-                        "|","if",">","then","else","end","<",">>" };
-
-static int specials_operators[] = { TRUE, FALSE, EXIT,CD, HISTORY, HELP,AGAIN,SET,SET_CHARACTER, GET, UNSET,AND , OR,
-                PIPE,IF,REDIRBIG,THEN, ELSE,END,REDIRLESS,DOUBLEREDIRBIG};
-
-void ConcatChar(char c, char *chain)
-{
-    char temp[2];
-    temp[0] = c;
-    temp[1] = '\0';
-    strcat(chain, temp);
-}
-
-int GetIndexOF(char* word)
-{
-    for (int i = 0; i < 21/*sizeof(special_strings)*/; i++)
-    {
-        if(strcmp(special_strings[i],word)==0)return i;
-    }
-    return -1;
-}
-
-int GetOperator(char* word)
-{
-    int index=GetIndexOF(word);
-    if(index==-1)
-    {
-        return SIMPLE_EXPRESSION;
-    }
-    return specials_operators[index];
-}
-
-char GetOneChar(char* strline,bool history)
-{
-    char c=getchar();
-    if(history)ConcatChar(c,strline);
-    return c;
-}
-
-void EndReadLine(char* strline,bool history)
-{
-    char c;//=GetOneChar();
-    while(c!= '\n')
-    {
-        c=GetOneChar(strline,history);
-    }
-}
-
-Expression* GetStructExpression(char* name, int op)
-{
-    Expression * exp = (Expression*)malloc(sizeof(Expression));//para guardar la primera expresion
-    exp->name=name;
-    exp->operators=op;
-    return exp;
-}
-
-
-#pragma endregion
-
-#pragma region Clasificacion de Caracteres
-
-int SpecialCaracter(char c)//devuelve si es un caracter especial simple
-{
-    //if(c=='#')return 1;
-    //if(c==';')return 1;
-    if(c=='&')return 1;
-    if(c=='|')return 1;
-    if(c=='<')return 1;
-    if(c=='>')return 1;
-    if(c=='`')return 1;
-    if(c==';')return 1;
-    return 0;
-}
-
-int SpecialCaracters(char* c)//devuelve si es un caracter especial en general
-{
-    //if(c=='#')return 1;
-    //if(c==';')return 1;
-    //if(strcmp(c,"&")==0)return 1;///////////not implemented
-    if(strcmp(c,"|")==0)return 1;
-    if(strcmp(c,"<")==0)return 1;
-    if(strcmp(c,">")==0)return 1;
-    if(strcmp(c,"`")==0)return 1;
-    if(strcmp(c,"&&")==0)return 1;
-    if(strcmp(c,"||")==0)return 1;
-    if(strcmp(c,">>")==0)return 1;
-    if(strcmp(c,";")==0)return 1;
-
-    // if(c=="|")return 1;
-    // if(c=="<")return 1;
-    // if(c==">")return 1;
-    // if(c=="&&")return 1;
-    // if(c=="||")return 1;
-    // if(c==">>")return 1;
-    return 0;
-}
-
-bool RedirCaracter(char* c)//devuelve si es un caracter especial de los que puede ir sin un comando delante
-{
-    if(strcmp(c,"<")==0||strcmp(c,">")==0||strcmp(c,">>")==0)return true;
-    return false;
-
-}
-
-bool IfCommand(int op)//devuelve si es una expresion del tipo if, else then o end
-{
-    //if(strcmp(c,"if")==0||strcmp(c,"then")==0||strcmp(c,"else")==0||strcmp(c,"end")==0)return true;
-    if(op==IF||op==ELSE||op==THEN||op==END)return true;
-
-    return false;
-}
-
-bool PossibleArgumentExpression(int op)
-{
-    if(op == TRUE || op == FALSE || op == EXIT || op == CD || op == HISTORY || op == HELP || op == GET || op == UNSET || op == SET || op==IF)
-    {
-        return true;
-    }
-    return false;
-}
-
-#pragma endregion
 
 #pragma region Comandos Especiales
-
-#pragma region Help
-void help_init()
-{
-    printf("Integrantes: Carlos Carret Miranda(C-212)\n"
-                         "Lauren Guerra Hernandez(C-212)\n"
-        "Funcionalidades:\n"
-        "basic: funcionalidades básicas (1-8)  (3 puntos)\n"
-        "multi-pipe: múltiples tuberías  (9)   (1 punto)\n"
-        "spaces: múltiples espacios   (11)    (0.5 puntos)\n"
-        "history: trabajar con el historial de comandos f(12)    (0.5 puntos)\n"
-        "ctrl+c: capturar y enviar señales a procesos (13) (0.5 puntos)\n"
-        "if:funcionalidad 15, 1punto"
-        "chain: concatenación de comandos con ; y operaciones booleanas (14) (0.5 puntos)\n"
-        "help: ayuda del shell (17) (1 punto)\n"
-
-        "Comandos built-in:\n"
-        "cd: cambia de directorios\n"
-        "exit: termina el shell\n"
-        "history: muestra los 10 últimos comandos ejecutados\n"
-        "again: se sutituye por un comando seleccionado dentro del historial\n"
-        "true: retorna 1\n"
-        "false: retorna 0\n"
-        "if expresi'on booleana\n"
-        "then\n"
-        "else\n"
-        "end\n"
-        "set:asigna un valor a una variable\n"
-        "get:obtiene el valor de una variable\n"
-        "unset:elimina una variable\n"
-        "help: muestra esta ayuda\n\n"
-        );
-}
-
-void help_basic()
-{
-    printf("\n Funcionalidad 1: Al comenzar cada iteraci'on de nuestra shell lo primero que se realiza en el m'etodo Shell"
-    "es imprimir `my-shell $` en la consola para luego con el getchar() leer del stdin de la misma.\n"
-	"Funcionalidad 2: Los comandos se ejecutan correctamente ya sean propios del sistema o pertenezcan"
-    "a nuestro build-in.\n"
-    "Funcionalidad 3: El comando cd cambia el directorio ,empleando la función chdir, seg'un el path que recibe como argumento.\n"
-
-    "Funcionalidad 4: Los operadores de redireccion fueron implementados comenzando con el operador <, luego ejecutando el comando al cual se le entra el contenido del algun archivo, luego, vamos a ejecutar la funcionalidad de los operadores > y >>, guardando o sobreescribiendo el contenido de algunos archivos\n"
-    "Funcionalidad 5: Los pipes fueron implementados utilizando un arreglo de de dos posiciones y el metodo pipe() para redirigir la entrada y la salida stdin, stdout, se ejecutan haciendo un fork y ejecutando con execvp en caso de ser necesario la parte izquierda y luego hacemos otro fork en un llamado recursivo a la parte derecha\n"
-    "Funcionalidad 6: Luego de terminar la ejecuci'on de una l'inea de comandos se vuelve al m'etodo shell"
-    "donde se vuelve a imprimir `my-shell $` y se puede entrar otra l'inea de comando para ser ejecutada \n"
-    "Funcionalidad 7: Se separan los comandos con un espacio, mas al tambi'en estar implementada la funcionalidad"
-    "spaces, se puede dejar m'as de un espacio entre comandos y entre 0 y muchos con operadores especiales .\n"
-    "Funcionalidad 8: En nuestro parser, m'etodo ReadAndEjecuteLine() luego de encontrarnos mediante el getchar()"
-    "con el caracter #, terminamos de leer esta linea pero no guardamos nada de lo que se encuentre despu'es de #. Adem'as se implement'o el comando exit que termina la ejecici'on de la consola,"
-    "utilizando el m'etodo exit() con exit(0) se indica que la salida fue satisfactoria y con exit(-1) lo opuesto.\n\n");
-
-}
-
-
-void help_chain()
-{
-	printf("\n Los operadores &&, ||, ; concatenan comandos, en el caso del ; vamos leyendo cada linea, cuando"
-    " nos encontramos con uno de estos enviamos esta l'inea a ejecutarse y seguimos leyendo esta l'inea de la consola y "
-    "cuando finalice la mandamos a ejecutar aparte, a la hora de ejecutar una línea tomamos como caracteres de mayor"
-    "prioridad a && y ||  , luego buscamos los pipes (command1|command2) y luego buscamos los if then else y end, por 'ultimo resolvemos"
-    "las expresiones simples, del tipo command1 argumento < archivo. \n\n");
-}
-
-void help_spaces()
-{
-	printf("\n Entre comandos y argumentos puede haber cualquier cantidad de espacios >=1 \n. Esto se implemt'o a la hora de ir tomando las instrucciones "
-    "de la consola con el getchar() si tenemos un espacio tal que la palabra que estamos formando esta vac'ia a'un, este espacio se obvia. Ejemplo:\n"
-    "`com1 arg1` y `com1     arg1` \n y entre comandos y operadores puede haber igualmente cualquier cantidad "
-    "de espacios. \n Ejemplo: com1 arg 1||com2 y com1               &&com2 arg1.\n \n");
-
-}
-
-void help_multipipe()
-{
-    printf("\nLos pipes fueron implementados utilizando un arreglo de de dos posiciones y el metodo pipe() para redirigir la entrada y la salida stdin, stdout, se ejecutan haciendo un fork y ejecutando con execvp en caso de ser necesario la parte izquierda y luego hacemos otro fork en un llamado recursivo a la parte derecha"
-    "Luego de llamar recursivo a la parte derecha, verificamos si existe otro pipe y en caso de existir volvemos a llamar recursivamente a la parte derecha y hacemos un fork a la parte izquierda del nuevo pipe encontrado para ejecutar su comando. \n "
-    "Se pueden ejecutar comandos que implementen algun operador de redireccion. Se puede poner cualquier cadena de comandos y caracteres especiales entre un pipe y otro.\n\n");
-}
-
-void help_controlc()
-{
-    printf("\n El Ctrl+C esta implementado utilizando la señal SINGINT que se recibe al inicio del método main(), la primera señal recibida no se toma"
-    ", esto se implement'o con un bool y si ya no estamos en la primera sennal se mata la ejecuci'on con SINGKILL. Hay un pequeño desperfecto a la hora de "
-    "dar Ctrl+C cuand no se est'a ejecutando ning'un comando este Ctrl+C se escribe en la consola y no sale un nuevo my shell $. \n\n ");
-}
-
-void help_history()
-{
-    printf("\nEl comando history muestra las 10 'ultimas instrucciones que le han sido dadas a nuestra consola, esto se implement'o guardando en history.txt estas "
-    "l'ineas de instrucciones y en cada ejecuci'on si la l'inea no empieza con un espacio se da la instrucci'on de guardarla. \n "
-    "En el caso del again esta again.txt en donde se guardan las mismas l'ineas que en el history pero luego de ser separadas por espacios, con una parte del parser adelantada, "
-    "la instrucci'on correspondiente a la l'inea que marca el again se guarda y se ejecuta llamando al m'etodo encargado de terminar de parsearla y ejecutarla.\n\n");
-
-}
-
-void help_if()
-{
-    printf("\n Se puede utilizar el comando condicional if al igual que then que significa lo que se ejecuta si el if resulta true, en este caso si se ejecut'o correctamente el proceso"
-    " que estaba dentro del if, o sea devuelve 0, el else se ejecuta si lo que est'a dentro del if no se ejecuta correctamente, o sea devuelve 1, y el end que significa el final del if actual. "
-    "En el caso de aparecer varios if en una misma instrucci'on solo se toma el primero como comando, los dem'as se toman como argumentos del comando anterior,"
-    "en el caso de que aparezca un then sin haber aparecido anteriormente un if, es tomado igualmente como argumento, al igual ocurre con el else y el end, que si no se han encontrado los comandos necesarios para"
-    " que estos se puedan ejecutar ser'an tomados como argumentos. Primeramente se ejecuta el codigo que de la condicion del if, si este devuelve 0 entonces entramos en la parte del Then, sino entramos a la parte del else.\n\n");
-}
-
-void help_variable()
-{
-    printf("\n Se Implemento el comando set para agregar variables con sus respectivos valores y pedir informacion sonbre las variables agregadas con sus valores en caso de pasar el set sin argumentos."
-    "Puede utilizarse get nombredelavariable para pedir el valor correspondiente a la variable y unset nombredelavariable para eliminar la variable de la lista de las variables guardadas"
-    "Todas estas variables son guardadas en un a lista doblemente enlazada, cuyo valor es de tipo keyvaluepair y cada nodo contiene el par llave-valor de cada variable agregada. \n\n");
-}
-
-int HELP_CODE(node* argument)
-{
-    Expression * next;
-    if(argument->next != NULL)
-        next = argument->next->value;
-    Expression * node_temp = argument->value;
-    if(argument->next==NULL)
-    {
-        help_init();    return 0;
-
-    }
-    else if(strcmp("basic",next->name)==0)
-    {
-        help_basic();    return 0;
-
-    }
-    else if(strcmp("chain",next->name)==0)
-    {
-        help_chain();    return 0;
-
-    }
-    else if(strcmp("history",next->name)==0)
-    {
-        help_history(); return 0;
-    }
-
-    else if(strcmp("spaces",next->name)==0)
-    {
-        help_spaces();    return 0;
-
-    }
-    else if(strcmp("multi-pipe",next->name)==0)
-    {
-        help_multipipe();    return 0;
-
-    }
-
-    else if(strcmp("ctrl+c",next->name)==0)
-    {
-        help_controlc(); return 0;
-    }
-     else if(strcmp("if",next->name)==0)
-    {
-        help_if(); return 0;
-    }
-     else if(strcmp("variables",next->name)==0)
-    {
-        help_variable(); return 0;
-    }
-    else
-    {
-         printf("invalid help command `%s'\n",next->name);
-         return 1;
-    }
-    return 0;
-
-}
-#pragma endregion
-
 
 int CD_CODE(node* argument)
 {
@@ -586,38 +22,21 @@ int CD_CODE(node* argument)
     if ( chdir_result == -1)
     {
          printf("bash: cd: %s: No such file or directory\n",node_temp->name);
-     //   printf("No se puede acceder a la direcci'on %s",node_temp->name);
         return 1;
     }
     return 0;
 }
 
-//void Shell();
 bool did_ctrl_c;
 int pid;
 int pid_inicial;
 void CtrlC()
 {
- //   printf("\n PID inicial:%d\n",pid_inicial);
-  //  printf("PID actual:%d\n",pid);
-   // printf("Bool:%d\n",did_ctrl_c);
     if(did_ctrl_c)
     {
-        //int pidnow=getpid();
-        //printf("PID Now: %d\n",pidnow);
-        //printf("PID: %d\n",pid);
-        //if(pid!=pid_inicial) {kill(pid,1);}
         did_ctrl_c=false;
 
         if(pid!=pid_inicial) kill(pid,9);
-
-        //else             
-          //  write(stdin, strdup("\n"),1);
-
-
-        //int*status=0;
-        //int child_pid = waitpid(pid_inicial, status, WNOHANG);
-        //printf("Lo que devuelve el wait:%d\n",child_pid);
     }
     else
     {
@@ -625,25 +44,9 @@ void CtrlC()
         if(pid==pid_inicial) 
         {
             did_ctrl_c=false;
-            // char buf[10];
-            // write(STDIN_FILENO, strdup("\n"),1);
-            // read(STDIN_FILENO, buf, 3);
-            //close(STDIN_FILENO);
-           // did_ctrl_c=false;
-            //printf("LLego al ctrlC\n");
-            //Shell();
-            //did_ctrl_c=false;
 
         }
 
-        //int pidnow=getpid();
-        //printf("PID Now: %d\n",pidnow);
-        //printf("PID: %d\n",pid);
-        //if(pid!=pid_inicial) {kill(pid,9);}
-        //int*status=0;
-        //int child_pid = waitpid(pid_inicial, status, WNOHANG);
-        //printf("Lo que devuelve el wait:%d",child_pid);
-        //kill(pid,SIGTERM);
     }
 }
 
@@ -670,10 +73,7 @@ int StrToInt(char* n)
 
 char* LineListToCharArray(list*strlist)
 {
-    //int count=0;
     char* line=calloc(sizeof(char),1000);
-
-    //strcat(line,)
     node* current=strlist->head;
     while(current!=NULL)
     {
@@ -682,8 +82,6 @@ char* LineListToCharArray(list*strlist)
         current=current->next;
     }
     strcat(line,"\n");
-    //free(line);
-    //return count;
     return line;
 }
 
@@ -722,8 +120,6 @@ int HISTORY_CODE(node* argument)
         char file_contents[1000];
         int num=read(STDIN_FILENO,file_contents,sizeof(file_contents));
         printf("%s",file_contents);
-        //free(file_contents);
-
 
         dup2(std_in,STDIN_FILENO);
         dup2(std_out,STDOUT_FILENO);
@@ -750,7 +146,6 @@ int ReadHistory(list* history_lines,char* file_contents,int fc_size)
         if(file_contents[i]=='\n')
         {
             ConcatChar(file_contents[i],line);
-            //strcat(line,"\n");
             push_back(history_lines,strdup(line));
             strcpy(line,"");
             count++;
@@ -765,18 +160,6 @@ int ReadHistory(list* history_lines,char* file_contents,int fc_size)
 }
 
 
-// bool RigthAgainArgument(char*argument)
-// {
-//     for (int i = 1; i < 11; i++)
-//     {
-//         char text[10];
-//         sprintf(text, "%d", i);   
-//         if(strcmp(argument,text)==0)
-//             return true;
-//     }
-//     return false;
-// }
-
 void EjecuteLine(list* line);
 
 
@@ -788,10 +171,6 @@ void SaveLine(char* strline, list*strlist)
     input_read(history_direction);
     char file_contents_history[1000];
     int num_history=read(STDIN_FILENO,file_contents_history,sizeof(file_contents_history));
-////posiblemente aqui sea necesario resetear el stdin
-
-    // dup2(std_in,STDIN_FILENO);
-    // dup2(std_out,STDOUT_FILENO);
 
 
     input_read(again_direction);
@@ -829,7 +208,6 @@ void SaveLine(char* strline, list*strlist)
         count_again--;
         count_history--;
     }
-    //strcat(strline,"\n");
     
 
     char* history_output=calloc(sizeof(char),1000);
@@ -837,11 +215,9 @@ void SaveLine(char* strline, list*strlist)
 
     while(count_history>0)
     {
-        //push_back(history_output)
         strcat(history_output,history_lines->head->value);
         strcat(again_output,again_lines->head->value);
 
-        //strcat(history_output,"\n");
         free(pop_front(again_lines));
         free(pop_front(history_lines));
 
@@ -859,7 +235,6 @@ void SaveLine(char* strline, list*strlist)
     only_write(again_direction);
     printf("%s",strdup(again_output));
 
-    //free(file_contents);
     free(history_lines);
     free(history_output);
 
@@ -929,9 +304,6 @@ int AGAIN_CODE(node*argument)
 
     }
     
-    //input_read(again_direction);
-
-//Leer aqui el again.txt y llamar el metodo ejecuteline con una lista de string creada con lo que estta en again.txt
 
     list* strlist=init_list("init");
     CharArrayToLineList(strlist,strdup(current_again->value));
@@ -941,55 +313,13 @@ int AGAIN_CODE(node*argument)
     if(strlist->head!=NULL) EjecuteLine(strlist);
 
 
-    // close(std_in);
-    // close(std_out);
-
-
-    
-    //char message[1000]=strdup()
-    
-    
-    //int n1= write(STDIN_FILENO, strdup(current->value), strlen(current->value));
-    
-    
-   // write(STDIN_FILENO, strdup(current->value), strlen(current->value));
-    
-    //write(STDOUT_FILENO, strdup(current->value), strlen(current->value));
-
-    //char buf[20];
-    
-
-
-
     dup2(std_in,STDIN_FILENO);
     dup2(std_out,STDOUT_FILENO);
     close(std_in);
     close(std_out);
 
-
-   // int n=read(STDIN_FILENO,buf,20);
-   // buf[n]='\0';
-    //printf("%s",buf);
-    // while(count>0)
-    // {
-    //     //push_back(history_output)
-    //     strcat(history_output,history_lines->head->value);
-    //     //strcat(history_output,"\n");
-    //     free(pop_front(history_lines));
-    //     count--;
-    // }
-
-    //FILE * fp = fopen(history_direction, "w");
-    //fclose(fp);        
-    //only_write(history_direction);
-
-    //free(file_contents);
     free_list(again_lines);
     return 0;
-    //dup2(std_in,STDIN_FILENO);
-    //dup2(std_out,STDOUT_FILENO);
-    //close(std_in);
-    //close(std_out);
 }
 
 
@@ -1000,50 +330,6 @@ int AGAIN_CODE(node*argument)
 
 #pragma region Ejecucion
 
-int only_write(char * file){ // Metodo para escribir el contenido que salga del stdout a un archivo
-    int fd = open(file, O_WRONLY | O_CREAT);
-
-    if(fd == -1)
-        return -1;
-
-    if(file == NULL)
-        fd = STDOUT_FILENO;
-
-    int tempdup = dup2(fd, STDOUT_FILENO);
-    if(tempdup == -1)
-        return -1;
-
-    close(fd);
-    return 0;
-}
-int only_append(char * file, char buf[1000], int num){ // Metodo para concatenar el contenido que esta guardado en buf hacia un archivo, num sera la cantidad de caracteres que se van a escribir
-
-    int fd=open(file, O_WRONLY | O_APPEND | O_CREAT , 0);
-
-    if(fd == -1)
-        return -1;
-
-    if(file == NULL)
-        fd = STDOUT_FILENO;
-
-    write(fd, buf, num);
-
-    close(fd);
-    return 0;
-}
-int input_read(char * file){ // Metodo para leer el contenido de un archivo y enviarlo al stdin
-    int fd = open(file, O_RDONLY | O_CREAT);
-
-    if(fd==-1)
-        return -1;
-
-    int tempdup = dup2(fd, STDIN_FILENO);
-    if(tempdup == -1)
-        return -1;
-
-    close(fd);
-    return 0;
-}
 
 int Run(node * com){ // Correr comandos simples, hace un fork y el hijo llama a execvp, en caso de ser exit y que existan pipes, hacemos exit(0) desde el hijo y cerramos el fork
     Expression * com_to_exec = com->value; // quedandonos con el value(Expression del primer nodo), debe de ser un comando a ejecutar, o algun comando que no exista
@@ -1060,7 +346,7 @@ int Run(node * com){ // Correr comandos simples, hace un fork y el hijo llama a 
 
     int count = 0;  // Contador para saber cuantos argumentos tenemos
     while(last_com != NULL && (last_com->operators == ARGS || last_com->operators== ARCHIVE)){// Comparamos en todo momento que sea de tipo ARGS o ARCHIVO para no equivocarnos y pasarle argumentos de algun tipo incorrecto
-        count++; 
+        count++;
         last = last->next;
         if(last != NULL)
             last_com = last->value;
@@ -1103,7 +389,7 @@ int Run(node * com){ // Correr comandos simples, hace un fork y el hijo llama a 
                     com_prev = com->previous->previous->value;
 
                     if(com_prev->operators == EXIT && com_to_exec->std_in==NULL){ // De ser un EXIT sabemos que tenemos que cerrar el fork del pipe pero no el proceso principal
-                        com_to_exec->std_in=strdup(com_prev->name); // Guardamos en el std_in del comando a ejecutar el nombre: exit para luego abrir un archivo con este nombre y guardar la salida del exit 
+                        com_to_exec->std_in=strdup(com_prev->name); // Guardamos en el std_in del comando a ejecutar el nombre: exit para luego abrir un archivo con este nombre y guardar la salida del exit
 
                         input_read(com_to_exec->std_in); // Leemos del archivo que se va a crear vacio y enviamos su contenido al stdin
 
@@ -1149,7 +435,7 @@ int Run(node * com){ // Correr comandos simples, hace un fork y el hijo llama a 
         int status; // Estado de la salida de la ejecucion del comando
 
         pid_t p=waitpid(rc,&status,0); // esperamos por el hijo a que este termine de ejecutar el comando
-        
+
         kill(rc, SIGKILL); // Matamos al hijo para que no quede en estado zombie
         return status; // Retornamos el valor de la salida de la ejecucion del comando, si se encontro y se ejecuto se devolvera 0, en caso contrario se devolvera algun numero distinto de 0 que describa el error
     }
@@ -1195,7 +481,7 @@ int PrintVariables(){ // Metodo para imprimir las variables que contenga la list
         keyvaluepair * kv = current->value;
         char * current_exp = kv->key;
         char * value = kv->value;
-        
+
         strcat(output, current_exp); // Concatenando key a la salida
         strcat(output, "=");
 
@@ -1207,7 +493,7 @@ int PrintVariables(){ // Metodo para imprimir las variables que contenga la list
         current = current->next;
         count++;
     }
-    
+
     printf("%s\n", output);
     return 0;
 }
@@ -1253,7 +539,7 @@ int AddVar(char * key, char * value){
 // Busca en la lista el proximo nodo Expression que sea un Operador de Caracter Set
 node * FindSetCharacter(node * beg){
     node * current = beg;
-    
+
     while (current!=NULL)
     {
         Expression * current_exp = current->value;
@@ -1265,18 +551,18 @@ node * FindSetCharacter(node * beg){
     return NULL;
 }
 
-// Ejecuta el contenido dentro de las comillas del comando SET 
+// Ejecuta el contenido dentro de las comillas del comando SET
 int ExecuteSetCharacter(char * key, node* beg , node * last){
     node * end =  FindSetCharacter(last->next); // Busca el nodo final, para tener bien definidos los limites del codigo a ejecutar entre las comillas
 
     if(end == NULL)
         return -1;
-   
+
     FILE * fp = fopen("temp2", "w"); // Abriendo archivo temp2 para guardar salida de ejecucion de lo que se encuentre entre las comillas
     fclose(fp);
-    
+
     only_write("temp2"); // escribiendo lo siguiente que salga por el stdout al archivo temp2
-    
+
 
     Execute(last->next, end->previous); // ejecutando el comando que se ha pasado entre las comillas
     int *status=0;
@@ -1313,7 +599,7 @@ int SET_CODE(node* exp){
     node * last = exp->next->next;
     Expression * last_exp;
 
-    
+
     if(last != NULL)
         last_exp = last->value;
     else
@@ -1402,7 +688,7 @@ int UNSET_CODE(node* exp)
         removeNode(var_list, temp);
         return 0;
     }
-    
+
     return -1;
 }
 
@@ -1505,7 +791,7 @@ int SolveExpressions(node * first_cmd, node * last_cmd){
     node * current = first_cmd;
     Expression * current_exp = current->value;
 
-    if(current_exp->operators != REDIRBIG && current_exp->operators != REDIRLESS && current_exp->operators != DOUBLEREDIRBIG) 
+    if(current_exp->operators != REDIRBIG && current_exp->operators != REDIRLESS && current_exp->operators != DOUBLEREDIRBIG)
         return ExecuteExpression(current);
     return -1;
 }
@@ -1544,7 +830,7 @@ int SolveBiggerRedir(node * first_cmd, node * last_cmd, int exp_out){
     if(output!=NULL){
         Expression * exp=first_cmd->value;
 
-        if(exp->operators != REDIRBIG && exp->operators != REDIRLESS && exp->operators != DOUBLEREDIRBIG){ 
+        if(exp->operators != REDIRBIG && exp->operators != REDIRLESS && exp->operators != DOUBLEREDIRBIG){
         input_read("temp");
 
 
@@ -1711,7 +997,7 @@ int Execute(node * first_cmd, node * last_cmd){
         node * END_node = Search_IF_THEN_ELSE(THEN_node, last_cmd, END);
         node * ELSE_node = Search_IF_THEN_ELSE(THEN_node, last_cmd, ELSE);
 
-        
+
         //Caso 1 para IF ELSE
         int IF_output = Execute(IF_ELSE_node->next, THEN_node->previous); // Aca se supone que se modifique la variable first_cmd, para que luego apunte hacia la instruccion siguiente al
         if(IF_output==0){ // Si devuelve True es xq tiene q ir hacia el THEN
@@ -2057,6 +1343,9 @@ printf("\n");
 
 
 #pragma endregion
+
+
+
 
 int main(int argc, char const *argv[])
 {
